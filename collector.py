@@ -166,6 +166,27 @@ def _int(value: Any) -> int:
         return 0
 
 
+def _thumb(image_versions2: Any, max_width: int = 640) -> str | None:
+    """从 image_versions2 里挑一张尺寸合适的缩略图 URL。
+
+    纯文字帖的 candidates 是空数组 → 返回 None。
+    挑「不超过 max_width 的最大一张」而不是最小一张：缩略图在 2x 屏上要放大显示，
+    取太小的会糊；但也不能取原图，动辄几千像素会把列表拖垮。
+    """
+    if not isinstance(image_versions2, dict):
+        return None
+    cands = image_versions2.get("candidates")
+    if not isinstance(cands, list) or not cands:
+        return None
+    usable = [c for c in cands if isinstance(c, dict) and c.get("url")]
+    if not usable:
+        return None
+    fits = [c for c in usable if _int(c.get("width")) <= max_width]
+    pick = (max(fits, key=lambda c: _int(c.get("width"))) if fits
+            else min(usable, key=lambda c: _int(c.get("width"))))
+    return pick.get("url")
+
+
 def parse(html: str) -> list[dict]:
     """从 SSR 页面里抽出帖子列表。"""
     posts: list[dict] = []
@@ -209,7 +230,11 @@ def _normalize(raw: dict) -> dict:
         "quote_count": _int(info.get("quote_count")),
         "taken_at": _int(raw.get("taken_at")),
         "media_type": raw.get("media_type"),
-        "has_image": bool(raw.get("image_versions2")),
+        # ⚠️ 不能用 bool(raw.get("image_versions2")) —— Threads 给**每一条**帖子
+        # （含纯文字帖）都返回了这个 key，纯文字帖的值是空壳 {"candidates": []}，
+        # 那个布尔值会恒为 True。实测踩过：库里 19,963 / 19,963 条全被标成有图。
+        "has_image": bool((raw.get("image_versions2") or {}).get("candidates")),
+        "thumb": _thumb(raw.get("image_versions2")),
         "is_reply": bool(info.get("is_reply")),
         "tag": tag_header.get("display_name") if isinstance(tag_header, dict) else None,
     }

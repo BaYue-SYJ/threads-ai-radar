@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS posts (
     taken_at        INTEGER DEFAULT 0,
     media_type      INTEGER,
     has_image       INTEGER DEFAULT 0,
+    thumb           TEXT,
     is_reply        INTEGER DEFAULT 0,
     tag             TEXT,
     keywords        TEXT DEFAULT '[]',
@@ -112,9 +113,47 @@ def connect() -> sqlite3.Connection:
     return con
 
 
+# 老库补列。
+# 「CREATE TABLE IF NOT EXISTS」对**已存在**的表完全不做任何事，所以给旧库
+# 新增字段必须显式 ALTER，否则老用户升级后一写就报 no such column。
+# 放在这里是为了让升级无需重建数据库、也不丢数据。
+_MIGRATIONS: list[tuple[str, str, str]] = [
+    ("posts", "thumb", "TEXT"),
+]
+
+
+def _ensure_columns(con: sqlite3.Connection) -> None:
+    for table, column, decl in _MIGRATIONS:
+        cols = {r["name"] for r in con.execute(f"PRAGMA table_info({table})")}
+        if column not in cols:
+            con.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
+# 老库补**数据**：
+# 旧版 collector 把 has_image 判成了恒为 1（见 _normalize 里的注释），所以存量库里
+# 几乎每一行都是 1。修好写入逻辑只会影响**新抓到的**帖子，老行得等它被再次采集到
+# 才会改写——那可能永远不发生。
+#
+# media_type=19 就是纯文字帖，这是确定性的（实测 52 条样本 100% 吻合：
+# 19→全部无图，1/8/2→全部有图），所以可以直接按它把老数据改对。
+# 反过来 1/8/2 也可能是空壳，但库里没有证据能推翻，保持不动。
+#
+# 幂等：改完就没有 mt=19 且 has_image=1 的行了，重复跑是空操作。
+_DATA_MIGRATIONS: list[str] = [
+    "UPDATE posts SET has_image = 0 WHERE media_type = 19 AND has_image = 1",
+]
+
+
+def _ensure_data(con: sqlite3.Connection) -> None:
+    for sql in _DATA_MIGRATIONS:
+        con.execute(sql)
+
+
 def init_db() -> None:
     with _lock, connect() as con:
         con.executescript(SCHEMA)
+        _ensure_columns(con)
+        _ensure_data(con)
 
 
 # ----------------------------------------------------------------- posts
@@ -123,9 +162,9 @@ UPSERT = """
 INSERT INTO posts (
     code,url,username,user_id,verified,text,lang,
     like_count,reply_count,repost_count,quote_count,taken_at,
-    media_type,has_image,is_reply,tag,keywords,category,
+    media_type,has_image,thumb,is_reply,tag,keywords,category,
     relevance,relevance_note,score,velocity,first_seen,last_seen,is_new
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
 ON CONFLICT(code) DO UPDATE SET
     like_count     = excluded.like_count,
     reply_count    = excluded.reply_count,
@@ -138,7 +177,10 @@ ON CONFLICT(code) DO UPDATE SET
     relevance      = excluded.relevance,
     relevance_note = excluded.relevance_note,
     keywords       = excluded.keywords,
-    last_seen      = excluded.last_seen
+    last_seen      = excluded.last_seen,
+    -- 用 COALESCE 而不是直接覆盖：老帖当初没存缩略图，靠后续采集复现时回填；
+    -- 若某次解析拿不到图（页面结构变动等），保留已有的，不要把好数据擦掉。
+    thumb          = COALESCE(excluded.thumb, posts.thumb)
 """
 
 
@@ -161,7 +203,8 @@ def upsert_posts(posts: Iterable[dict[str, Any]]) -> tuple[int, int]:
                 int(p.get("like_count") or 0), int(p.get("reply_count") or 0),
                 int(p.get("repost_count") or 0), int(p.get("quote_count") or 0),
                 int(p.get("taken_at") or 0), p.get("media_type"),
-                int(bool(p.get("has_image"))), int(bool(p.get("is_reply"))),
+                int(bool(p.get("has_image"))), p.get("thumb"),
+                int(bool(p.get("is_reply"))),
                 p.get("tag"), json.dumps(p.get("keywords") or [], ensure_ascii=False),
                 p.get("category", ""), p.get("relevance", "relevant"),
                 p.get("relevance_note", ""), float(p.get("score") or 0),

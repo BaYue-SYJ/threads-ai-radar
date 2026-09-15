@@ -11,6 +11,8 @@ data/*.db-journal
 data/*.db-wal
 data/*.db-shm
 data/*.log
+# 手动备份：改动数据结构前自己拷的快照，体积大且含真实抓取数据，勿提交
+data/*.bak*
 
 # Python
 __pycache__/

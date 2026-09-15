@@ -222,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
         posts.sort(key=lambda p: -(p.get("score") or 0))
         header = ["排名", "帖子ID", "账号", "分组", "爆款评分", "上涨速度",
                   "点赞", "回复", "转发", "引用", "总互动", "发布时间",
-                  "首次入库", "命中关键词", "正文", "链接"]
+                  "首次入库", "命中关键词", "正文", "缩略图", "链接"]
         out = []
         for i, p in enumerate(posts, 1):
             total = ((p.get("like_count") or 0) + (p.get("reply_count") or 0)
@@ -235,6 +235,7 @@ class Handler(BaseHTTPRequestHandler):
                 fmt_ts(p.get("taken_at")), fmt_ts(p.get("first_seen")),
                 " / ".join(p.get("keywords") or []),
                 (p.get("text") or "").replace("\r", " ").replace("\n", " "),
+                p.get("thumb") or "",
                 p.get("url") or "",
             ])
         return self.csv_out(header, out, f"threads_爆款帖子_{stamp}.csv")

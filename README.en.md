@@ -674,20 +674,25 @@ a later release.
 7. Each cycle takes roughly 2 minutes per variant × number of keywords. If the keyword count grows a lot, raise the interval too, or cycles will pile up.
 8. **The peer dimension needs time.** In the first cycle only 14 of 391 authors had ≥2 relevant posts; the other 96% appeared once. For the "steady output" leaderboard to mean anything, run at least a dozen cycles.
 9. **Cold start for new accounts/posts**: `velocity` (interactions/hour) has only one snapshot on first collection, so the curve needs a second cycle to take shape.
-10. **⚠️ Known defect: the `has_image` field is always 1, and the UI shows no images.**
-    Two related issues, not yet fixed in the current version:
+10. **`has_image` is always 1 and the UI shows no images — fixed, but thumbnails for existing rows need backfilling.**
+    This was a real bug, fixed in this release. But **old rows in an existing database can't be conjured out of
+    nothing**, so three separate things:
 
-    - `collector.py` tests `bool(raw.get("image_versions2"))`, but Threads returns that key on **every**
-      post — including text-only ones, where its value is the empty shell `{"candidates": []}` — so the
-      boolean is always true. Measured: all 16,710 / 16,710 rows have `has_image=1`, making the field
-      useless for filtering. The correct test is
-      `bool((raw.get("image_versions2") or {}).get("candidates"))`, or just use `media_type`
-      (measured: `19` = text-only 66.7%, `1` = single image 16.7%, `8` = carousel 11.6%, `2` = video 4.9%).
-    - The frontend **renders no images at all**, and the `posts` table has no column for a thumbnail URL,
-      so the entire UI is a text list. For visual niches like "AI image prompts", judging what's trending
-      still means opening each original post.
-
-    Planned to be fixed together in a later release (adding a column requires handling old-database compatibility).
+    - **Write path (fixed)**: the old test was `bool(raw.get("image_versions2"))`, but Threads returns that key
+      on **every** post — including text-only ones, where its value is the empty shell `{"candidates": []}` — so
+      the boolean was always true. Measured: all 19,963 / 19,963 rows were flagged "has image". It now reads
+      `bool((raw.get("image_versions2") or {}).get("candidates"))`. Cross-checked on a fresh 52-post sample:
+      all 33 posts with `media_type=19` (text-only) have no image, and all 19 with `1`/`8`/`2`
+      (single image / carousel / video) do — 100% consistent.
+    - **Existing `has_image` values (fixed)**: a data migration runs once at startup
+      (`UPDATE posts SET has_image=0 WHERE media_type=19 AND has_image=1`). It is idempotent and deletes
+      nothing. Measured: it flipped 13,247 text-only posts back to "no image", taking `has_image=1` from
+      19,966 down to 6,719 out of 19,968 rows (33.6%).
+    - **Thumbnails (new, new posts only)**: the `posts` table gained a `thumb` column, and the list, card, and
+      detail drawer all render it; CSV export includes it too. But **`thumb` is empty on old rows** — no URL was
+      ever stored, so there is nothing to recover. It backfills as those posts get collected again (the write
+      uses `COALESCE`, so existing good values are never erased). To see thumbnails everywhere immediately,
+      delete `data/radar.db` and run one cycle.
 
 ---
 

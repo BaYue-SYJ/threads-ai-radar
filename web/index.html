@@ -179,6 +179,18 @@ tbody tr:hover{background:rgba(43,138,171,.045)}
 tbody tr:last-child td{border-bottom:0}
 td.num{font-variant-numeric:tabular-nums;text-align:right}
 td.tx{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- 缩略图 ----------
+   表格里的缩略图放在正文单元格**内部**，不新增列 —— 加列会抬高表格最小宽度，
+   1024px 那段本来就紧，再加一列必坏。 */
+.txw{display:flex;gap:8px;align-items:center;min-width:0}
+.txw>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+img.th{width:34px;height:34px;border-radius:4px;object-fit:cover;flex:0 0 auto;
+  background:var(--line);display:block}
+.p-img{width:100%;height:150px;object-fit:cover;border-radius:8px;display:block;
+  background:var(--line);margin:2px 0 10px}
+.dw-img{width:100%;max-height:420px;object-fit:cover;border-radius:10px;display:block;
+  background:var(--line);margin:0 0 22px}
 .mono{font-variant-numeric:tabular-nums}
 .empty{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:64px 30px;
   text-align:center;color:var(--faint)}
@@ -628,6 +640,14 @@ input.f-group{min-width:130px;max-width:130px}
   function tagOf(c){var col=TAGCOL[c]||TAGCOL['未分组'];
     return '<span class="tag" style="color:'+col+'">'+esc(c)+'</span>';}
   function total(p){return p.like_count+p.reply_count+p.repost_count+p.quote_count;}
+  /* media_type 的 Threads 语义：19=纯文字 / 1=单图 / 8=多图 / 2=视频。
+     注意视频帖也带 image_versions2（那是封面图），所以「有图」不等于「是图片帖」。 */
+  function mediaLabel(mt){
+    return mt===19?'纯文字':mt===1?'单图':mt===8?'多图':mt===2?'视频':'未知媒体';}
+  function thumbImg(p,cls){
+    if(!p.thumb) return '';
+    return '<img class="'+cls+'" src="'+esc(p.thumb)+'" alt="" loading="lazy" '+
+      'referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';}
   function compact(x){x=x||0;
     if(x>=1000000) return (x/1000000).toFixed(1)+'M';
     if(x>=1000) return (x/1000).toFixed(1)+'K';
@@ -747,7 +767,8 @@ input.f-group{min-width:130px;max-width:130px}
           '<td class="num mono">'+n(p.reply_count)+'</td>'+
           '<td class="num mono">'+n(p.repost_count)+'</td>'+
           '<td class="num mono">'+n(p.quote_count)+'</td>'+
-          '<td class="tx">'+esc(String(p.text||'').replace(/\s+/g,' ').slice(0,110))+'</td>'+
+          '<td class="tx"><div class="txw">'+thumbImg(p,'th')+
+            '<span>'+esc(String(p.text||'').replace(/\s+/g,' ').slice(0,110))+'</span></div></td>'+
           '<td style="color:var(--faint);font-size:12px">'+ago(p.taken_at)+'</td></tr>';}).join('')+
         '</tbody></table></div>';
     }else{
@@ -760,6 +781,7 @@ input.f-group{min-width:130px;max-width:130px}
               (p.verified?'<span class="vf"></span>':'')+'</div>'+
               '<div class="p-time">'+ago(p.taken_at)+' · 速度 '+(p.velocity||0).toFixed(1)+'/h</div>'+
             '</div></div>'+
+          thumbImg(p,'p-img')+
           '<p class="p-text">'+esc(p.text||'（无正文）')+'</p>'+
           '<div class="p-metrics">'+
             '<span>赞<b>'+n(p.like_count)+'</b></span>'+
@@ -819,9 +841,10 @@ input.f-group{min-width:130px;max-width:130px}
           '<div><h4>上涨速度</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1;color:var(--accent)">'+
             (d.velocity||0).toFixed(2)+'</div><div class="hint">互动 / 小时</div></div>'+
         '</div>'+ spark +
+        thumbImg(d,'dw-img')+
         '<div class="dw-sec"><h4>正文</h4><div class="dw-text">'+esc(d.text||'（无正文）')+'</div></div>'+
         '<div class="dw-sec"><h4>属性</h4><div class="dw-kv">'+tagOf(d.category)+
-          '<span class="tag" style="color:var(--muted)">'+(d.has_image?'含图片':'纯文字')+'</span>'+
+          '<span class="tag" style="color:var(--muted)">'+mediaLabel(d.media_type)+'</span>'+
           '<span class="tag" style="color:var(--muted)">'+ago(d.taken_at)+'</span>'+
           '<span class="tag" style="color:var(--muted)">'+(d.lang||'未知语言')+'</span>'+
           '<span class="tag" style="color:'+(d.relevance==='relevant'?'var(--live)':'var(--warn)')+'">'+
@@ -1410,13 +1433,13 @@ input.f-group{min-width:130px;max-width:130px}
     if(!list.length){ alert('当前没有可导出的结果'); return; }
     downloadCsv('threads_爆款帖子_'+stamp()+'.csv',
       ['排名','帖子ID','账号','分组','爆款评分','上涨速度','点赞','回复','转发','引用',
-       '总互动','发布时间','命中关键词','正文','链接'],
+       '总互动','发布时间','命中关键词','正文','缩略图','链接'],
       list.map(function(p,i){
         return [i+1,p.code,'@'+p.username,p.category,(p.score||0).toFixed(2),
           (p.velocity||0).toFixed(2),p.like_count,p.reply_count,p.repost_count,
           p.quote_count,total(p),fmtT(p.taken_at),
           (p.keywords||[]).join(' / '),
-          String(p.text||'').replace(/\s+/g,' '),p.url];}));
+          String(p.text||'').replace(/\s+/g,' '),p.thumb||'',p.url];}));
   }
   function exportAuthors(){
     var list=A.filter(function(a){return !aq || authorBlob(a).indexOf(aq)>=0;});
