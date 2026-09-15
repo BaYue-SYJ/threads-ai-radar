@@ -1,0 +1,33 @@
+# ============================================================
+#  threads-ai-radar
+# ============================================================
+
+# 本地配置，切勿提交（含代理地址等环境相关设置）
+.env
+
+# 数据库与日志
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 开发期截图（含真实抓取数据，勿公开）
+_shots/
+
+# Node —— tools/ 下的回归脚本需要，但非运行本项目所必需
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

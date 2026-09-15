@@ -1,0 +1,1532 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Threads 爆款雷达 · 实时关键词监控</title>
+<!-- 内联 favicon：否则浏览器会去请求 /favicon.ico 拿 404，控制台平白多条报错 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316302F'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%232B8AAB'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232B8AAB' stroke-width='1.4' opacity='.55'/%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%232B8AAB' stroke-width='1' opacity='.25'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#F7F6F3; --card:#fff; --ink:#16302F; --accent:#2B8AAB;
+  --line:rgba(22,48,47,.10); --line2:rgba(22,48,47,.18);
+  --muted:rgba(22,48,47,.56); --faint:rgba(22,48,47,.36);
+  --warn:#A8752B; --live:#3E8E5A;
+  --serif:'Cormorant Garamond','Songti SC','Noto Serif SC',Georgia,serif;
+  --sans:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;
+  line-height:1.65;-webkit-font-smoothing:antialiased}
+
+/* ---------- nav ---------- */
+.nav{position:sticky;top:0;z-index:60;background:#fff;border-bottom:1px solid var(--line)}
+.nav-inner{height:92px;max-width:1360px;margin:0 auto;padding:0 36px;
+  display:flex;align-items:center;gap:22px}
+.brand{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:none}
+.brand-mark{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:.02em;line-height:1.1}
+.brand-sub{font-size:11px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase}
+
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
+  border-radius:100px;padding:6px 14px;font-size:12.5px;color:var(--muted);flex:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dot.on{background:var(--live);animation:pulse 1.6s infinite}
+.dot.busy{background:var(--accent);animation:pulse .9s infinite}
+.dot.off{background:var(--warn)}
+@keyframes pulse{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{font-family:var(--sans);font-size:12.5px;padding:7px 15px;border-radius:9px;
+  border:1px solid var(--line2);background:#fff;color:var(--muted);cursor:pointer;
+  transition:.16s;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.solid{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.solid:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- shell ---------- */
+.shell{max-width:1360px;margin:0 auto;padding:30px 36px 90px}
+
+/* ---------- progress ---------- */
+.prog{display:none;background:#fff;border:1px solid var(--accent);border-radius:var(--r);
+  padding:14px 20px;margin-bottom:16px;align-items:center;gap:14px}
+.prog.on{display:flex}
+.prog-t{font-size:13px;font-weight:500;flex:none}
+.prog-bar{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.prog-bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.prog-n{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+
+/* ---------- overview ---------- */
+.overview{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:19px 22px;
+  display:flex;flex-direction:column;justify-content:space-between;min-height:118px}
+.stat.lead{background:var(--ink);border-color:var(--ink)}
+.stat.lead .stat-k,.stat.lead .stat-n{color:rgba(255,255,255,.5)}
+.stat.lead .stat-v{color:#fff}
+.stat-k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.stat-v{font-family:var(--serif);font-size:40px;font-weight:500;line-height:1;margin:12px 0 7px;
+  font-variant-numeric:tabular-nums}
+.stat-v em{font-size:14px;font-style:normal;color:var(--faint);margin-left:4px;font-family:var(--sans)}
+.stat-n{font-size:11.5px;color:var(--faint)}
+
+/* ---------- panels ---------- */
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px}
+.panel-h{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;user-select:none}
+.panel-h h3{font-size:12.5px;font-weight:500;letter-spacing:.04em;flex:none}
+.panel-h .cnt{font-size:12px;color:var(--faint)}
+.panel-h .arrow{margin-left:auto;color:var(--faint);font-size:11px;transition:.2s}
+.panel.open .panel-h .arrow{transform:rotate(180deg)}
+.panel-b{display:none;padding:0 20px 18px}
+.panel.open .panel-b{display:block}
+
+.kwlist{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.kw{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);
+  border-radius:8px;padding:5px 8px 5px 11px;font-size:12.5px;background:var(--paper)}
+.kw .g{font-size:10.5px;color:var(--faint);letter-spacing:.08em}
+.kw .x{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:14px;
+  line-height:1;padding:0 2px}
+.kw .x:hover{color:#A32D2D}
+.kwadd{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text],input[type=search],select{font-family:var(--sans);font-size:13px;color:var(--ink);
+  background:#fff;border:1px solid var(--line2);border-radius:9px;padding:7px 11px;outline:none}
+input[type=text]:focus,input[type=search]:focus,select:focus{border-color:var(--accent)}
+input[type=text]{min-width:210px}
+.hint{font-size:11.5px;color:var(--faint);line-height:1.8}
+
+.logbox{max-height:230px;overflow-y:auto;font-family:ui-monospace,Consolas,monospace;
+  font-size:12px;line-height:1.95;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px;padding:12px 15px}
+.logbox div{white-space:pre-wrap;word-break:break-word}
+.logbox .t{color:var(--faint);margin-right:9px}
+.logbox .warn{color:var(--warn)}
+.logbox .err{color:#A32D2D}
+
+/* ---------- filters ---------- */
+.filters{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;
+  margin-bottom:16px}
+.frow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.frow+.frow{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.flabel{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  min-width:48px;flex:none}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{border:1px solid var(--line2);background:transparent;color:var(--muted);
+  font-family:var(--sans);font-size:12.5px;padding:4px 12px;border-radius:100px;
+  cursor:pointer;transition:.16s;white-space:nowrap}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip .n{opacity:.6;margin-left:5px;font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--accent);width:140px;vertical-align:middle}
+.rng-v{font-variant-numeric:tabular-nums;font-size:13px;color:var(--accent);font-weight:500;min-width:40px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+.seg button{font-family:var(--sans);font-size:12.5px;padding:6px 14px;border:0;background:#fff;
+  color:var(--muted);cursor:pointer;transition:.16s}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on{background:var(--ink);color:#fff}
+.spacer{margin-left:auto}
+.sw{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.sw input{accent-color:var(--accent);width:15px;height:15px}
+
+/* ---------- results ---------- */
+.meta{display:flex;align-items:baseline;gap:10px;margin:2px 2px 16px}
+.meta-n{font-family:var(--serif);font-size:25px;font-weight:500;line-height:1}
+.meta-t{font-size:12.5px;color:var(--faint)}
+
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.post{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;
+  cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:11px;position:relative}
+.post:hover{border-color:var(--line2);transform:translateY(-2px)}
+.post.feat{grid-column:span 2;padding:24px 26px}
+.post.feat .p-text{font-size:15.5px;line-height:1.7}
+.newbadge{position:absolute;top:14px;right:16px;font-size:10px;letter-spacing:.1em;
+  color:#fff;background:var(--accent);border-radius:100px;padding:2px 8px}
+.p-head{display:flex;align-items:center;gap:10px;min-width:0}
+.p-rank{font-family:var(--serif);font-size:25px;font-weight:500;color:var(--accent);line-height:1;
+  font-variant-numeric:tabular-nums;flex:none;min-width:32px}
+.post.feat .p-rank{font-size:35px;min-width:44px}
+.p-who{min-width:0;flex:1}
+.p-user{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-time{font-size:11.5px;color:var(--faint)}
+.vf{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--accent);
+  vertical-align:-1px;margin-left:4px}
+.p-text{font-size:13.5px;line-height:1.65;display:-webkit-box;-webkit-line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.post.feat .p-text{-webkit-line-clamp:5}
+.p-metrics{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-top:auto}
+.p-metrics b{font-weight:500;color:var(--ink);font-size:13.5px;margin-left:4px}
+.p-foot{display:flex;align-items:center;gap:9px;padding-top:10px;border-top:1px solid var(--line)}
+.tag{font-size:10.5px;letter-spacing:.05em;padding:2.5px 9px;border-radius:100px;
+  border:1px solid currentColor;white-space:nowrap}
+.score{margin-left:auto;font-family:var(--serif);font-size:18px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.score i{font-family:var(--sans);font-size:10px;font-style:normal;color:var(--faint);
+  letter-spacing:.1em;margin-right:4px}
+.bar{height:2px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:2px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
+
+.tw{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+/* 窄屏时同行表格列多，改为容器内横向滚动。
+   直接 overflow:hidden 会把右侧几列静默裁掉——数据还在但用户看不到，
+   比「需要滑一下」更糟。 */
+.tw.scrollx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);font-weight:400;
+  text-align:left;padding:13px 14px;border-bottom:1px solid var(--line2)}
+td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+tbody tr{cursor:pointer;transition:.14s}
+tbody tr:hover{background:rgba(43,138,171,.045)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right}
+td.tx{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mono{font-variant-numeric:tabular-nums}
+.empty{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:64px 30px;
+  text-align:center;color:var(--faint)}
+
+/* ---------- drawer ---------- */
+.mask{position:fixed;inset:0;background:rgba(22,48,47,.32);opacity:0;pointer-events:none;
+  transition:.28s;z-index:80}
+.mask.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(570px,94vw);background:var(--paper);
+  border-left:1px solid var(--line2);transform:translateX(101%);
+  transition:.34s cubic-bezier(.4,0,.2,1);z-index:90;overflow-y:auto}
+.drawer.on{transform:none}
+.dw-head{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);
+  padding:20px 28px;display:flex;align-items:center;gap:14px;z-index:2}
+.dw-title{font-family:var(--serif);font-size:21px;font-weight:600;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dw-x{background:transparent;border:1px solid var(--line2);border-radius:9px;width:33px;height:33px;
+  cursor:pointer;color:var(--muted);font-size:17px;line-height:1;flex:none}
+.dw-x:hover{border-color:var(--accent);color:var(--accent)}
+.dw-body{padding:24px 28px 60px}
+.dw-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:22px}
+.dwm{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 12px;text-align:center}
+.dwm b{display:block;font-family:var(--serif);font-size:25px;font-weight:500;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.dwm span{font-size:10.5px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+.dw-sec{margin-bottom:22px}
+.dw-sec h4{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  font-weight:400;margin-bottom:9px}
+.dw-text{background:#fff;border:1px solid var(--line);border-radius:11px;padding:17px 19px;
+  font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+.dw-kv{display:flex;flex-wrap:wrap;gap:7px}
+.dw-link{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;
+  text-decoration:none;padding:11px 21px;border-radius:10px;font-size:13.5px;transition:.18s}
+.dw-link:hover{background:var(--accent)}
+.spark{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+
+/* ---------- 通道告警 ---------- */
+.alert{display:none;background:#fff;border:1px solid #A32D2D;border-left:3px solid #A32D2D;
+  border-radius:var(--r);padding:15px 20px;margin-bottom:16px;gap:14px;align-items:flex-start}
+.alert.on{display:flex}
+.alert-ic{font-size:17px;line-height:1.2;flex:none;color:#A32D2D}
+.alert-b{flex:1;min-width:0}
+.alert-t{font-size:13.5px;font-weight:500;margin-bottom:5px}
+.alert-d{font-size:12.5px;color:var(--muted);line-height:1.7}
+.alert-d code{background:var(--paper);border-radius:5px;padding:1px 6px;font-size:12px}
+
+/* ---------- view tabs ---------- */
+.tabs{display:flex;gap:2px;background:var(--paper);border:1px solid var(--line2);
+  border-radius:10px;padding:3px;flex:none}
+.tabs button{font-family:var(--sans);font-size:12.5px;padding:6px 15px;border:0;
+  background:transparent;color:var(--muted);cursor:pointer;border-radius:8px;
+  transition:.16s;white-space:nowrap}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(22,48,47,.10)}
+
+/* ---------- peers / 同行监控 ---------- */
+.coverage{background:#fff;border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--r);padding:16px 22px;margin-bottom:16px;display:flex;gap:26px;
+  align-items:center;flex-wrap:wrap}
+.cv-main{font-size:13px;line-height:1.6;flex:1;min-width:270px}
+.cv-main b{font-weight:600;font-variant-numeric:tabular-nums}
+.cv-stats{display:flex;gap:22px;flex-wrap:wrap}
+.cv-s{text-align:right}
+.cv-s b{display:block;font-family:var(--serif);font-size:24px;font-weight:500;line-height:1.15;
+  font-variant-numeric:tabular-nums}
+.cv-s span{font-size:10.5px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+
+.tier{font-size:10.5px;letter-spacing:.04em;padding:2.5px 9px;border-radius:100px;
+  border:1px solid currentColor;white-space:nowrap;display:inline-block}
+.tier.core{color:#2B8AAB}
+.tier.steady{color:#6B7F5E}
+.tier.single_hit{color:#A8752B}
+.tier.casual{color:#8A8A85}
+
+td.usr{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.when{color:var(--faint);font-size:12px;white-space:nowrap}
+th.nw{white-space:nowrap}
+td.dirs{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dirs .d{margin-right:7px;white-space:nowrap}
+.dirs .d i{font-style:normal;color:var(--faint);margin-left:3px;font-size:11px}
+.meter{height:3px;background:var(--line);border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+
+.authors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.acard{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;
+  cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:11px}
+.acard:hover{border-color:var(--line2);transform:translateY(-2px)}
+.acard-h{display:flex;align-items:center;gap:10px;min-width:0}
+.acard-u{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.acard-m{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap;
+  font-variant-numeric:tabular-nums;margin-top:auto}
+.acard-m b{font-weight:500;color:var(--ink);font-size:13.5px;margin-left:4px}
+
+/* ---------- 关注 / 星标 ---------- */
+.star{background:none;border:0;padding:0 2px;cursor:pointer;font-family:var(--sans);
+  font-size:15px;line-height:1;color:var(--faint);transition:color .15s,transform .15s;flex:none}
+.star:hover{color:var(--warn);transform:scale(1.12)}
+.star.on{color:#D9A441}
+.acard-h .star{font-size:16px;margin-left:2px}
+td.star-cell{text-align:center;padding-left:2px;padding-right:0}
+.wbadge{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.04em;
+  color:#fff;background:var(--accent);border-radius:100px;padding:1.5px 7px;margin-left:6px}
+.wnew{color:var(--accent);font-weight:500;font-variant-numeric:tabular-nums}
+.wzero{color:var(--faint)}
+.note{display:block;font-size:11.5px;color:var(--faint);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+/* 取消关注用中性描边 × 而不是金色 ★：金色在这套配色里表示「已关注」，
+   拿它当删除按钮会让用户以为点一下是「标记」而不是「移除」。 */
+.rmx{background:transparent;border:1px solid var(--line2);border-radius:8px;
+  width:26px;height:26px;cursor:pointer;color:var(--faint);font-size:15px;line-height:1;
+  font-family:var(--sans);flex:none;transition:.16s}
+.rmx:hover{border-color:#A32D2D;color:#A32D2D}
+/* 备注/分组这类窄输入框：宽度收在 CSS 里而不是 style 属性上，
+   否则窄屏的媒体查询压不过内联样式，表单会挤成一团。
+   选择器写成 input.xxx 是为了跟 `input[type=text]{min-width:210px}` 同权重，
+   靠「后出现」取胜——只写 .f-narrow 的话会被那条规则盖掉。 */
+input.f-narrow{min-width:190px;max-width:230px}
+input.f-group{min-width:130px;max-width:130px}
+
+/* ---------- responsive ---------- */
+@media(max-width:1180px){
+  .overview{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:1fr 1fr}
+  .post.feat{grid-column:span 2}
+  .authors{grid-template-columns:1fr 1fr}
+  /* 三个标签 + 品牌 + 右侧控件，单行导航最小内容宽度约 1078px。
+     861~1080px 这段（平板）不收紧间距整页会横向溢出。 */
+  .nav-inner{padding:0 22px;gap:14px}
+  .nav-right{gap:7px}
+  .pill{padding:6px 11px}
+  .tabs button{padding:6px 12px}
+  /* 同行表格列太多，窄屏按优先级砍：爆款率可从帖/爆款算出，
+     均互动与最高分属次要指标。留下账号/分层/帖/爆款/总互动/方向/活跃。 */
+  .c-hitrate,.c-avg,.c-best{display:none}
+  /* 关注名单里「我为什么关注这个人」比「他发什么方向」更该留住，
+     所以窄屏砍的是方向列，把宽度让给备注。 */
+  .c-wdirs{display:none}
+}
+@media(max-width:1080px){
+  /* 单行真的塞不下了（实测 1024px 时 nav-right 被挤出 54px），
+     整行下移而不是继续压间距——压到后面按钮会挤成一条看不清的东西。 */
+  .nav-inner{height:auto;min-height:88px;padding:12px 20px;flex-wrap:wrap;gap:12px}
+  .nav-right{margin-left:0;width:100%}
+}
+@media(max-width:860px){
+  .nav-inner{height:auto;min-height:88px;padding:14px 20px;flex-wrap:wrap;gap:12px}
+  .nav-right{margin-left:0;width:100%}
+  .shell{padding:20px 18px 70px}
+  .overview{grid-template-columns:1fr 1fr;gap:9px}
+  .stat{padding:15px 16px;min-height:96px}
+  .stat-v{font-size:31px}
+  .grid{grid-template-columns:1fr;gap:11px}
+  .post.feat{grid-column:span 1;padding:18px 20px}
+  .flabel{min-width:auto}
+  td.tx{display:none}
+  .drawer{width:100vw}
+  .dw-metrics{grid-template-columns:1fr 1fr}
+  .authors{grid-template-columns:1fr}
+  .nav-inner{flex-wrap:wrap}
+  .coverage{padding:14px 16px;gap:16px}
+  .cv-stats{gap:16px}
+  /* 手机上同行表格改为可横向滑动，列宽保持可读，不静默裁列 */
+  .tw.scrollx table{min-width:760px}
+  /* 表单在手机上改成整行堆叠：三个控件挤一行会互相压，按钮还会被切掉 */
+  .kwadd input[type=text]{flex:1 1 100%;min-width:0;max-width:none}
+  .kwadd .btn{width:100%}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span class="brand-mark">爆款雷达</span>
+      <span class="brand-sub">Threads · live keyword monitor</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <button data-t="radar" class="on">关键词雷达</button>
+      <button data-t="peers">同行监控</button>
+      <button data-t="watch">关注名单</button>
+    </div>
+    <span class="pill"><span class="dot" id="dot"></span><span id="stateText">连接中…</span></span>
+    <span class="pill" id="nextPill" style="display:none">下次采集 <b id="countdown">—</b></span>
+    <div class="nav-right">
+      <select id="intervalSel" title="采集间隔">
+        <option value="5">每 5 分钟</option>
+        <option value="10">每 10 分钟</option>
+        <option value="15">每 15 分钟</option>
+        <option value="30">每 30 分钟</option>
+        <option value="60">每 1 小时</option>
+        <option value="180">每 3 小时</option>
+      </select>
+      <button class="btn" id="probeBtn2" title="自检抓取通道">自检</button>
+      <button class="btn" id="pauseBtn">暂停</button>
+      <button class="btn solid" id="collectBtn">立即采集</button>
+    </div>
+  </div>
+</nav>
+
+<div class="shell">
+
+  <div class="prog" id="prog">
+    <span class="prog-t">正在采集</span>
+    <span class="prog-bar"><i id="progBar"></i></span>
+    <span class="prog-n" id="progText">—</span>
+  </div>
+
+  <div id="view-radar">
+  <div class="alert" id="chanAlert">
+    <span class="alert-ic">✕</span>
+    <div class="alert-b">
+      <div class="alert-t" id="chanTitle">抓取通道异常</div>
+      <div class="alert-d" id="chanDetail">—</div>
+    </div>
+    <button class="btn" id="probeBtn">通道自检</button>
+  </div>
+
+  <section class="overview">
+    <div class="stat lead">
+      <span class="stat-k">相关帖子</span>
+      <span class="stat-v" id="sRelevant">—</span>
+      <span class="stat-n" id="sTotalNote">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-k">覆盖账号</span>
+      <span class="stat-v" id="sAuthors">—</span>
+      <span class="stat-n">按作者去重</span>
+    </div>
+    <div class="stat">
+      <span class="stat-k">总互动量</span>
+      <span class="stat-v" id="sInter">—</span>
+      <span class="stat-n" id="sInterNote">赞 + 回 + 转 + 引</span>
+    </div>
+    <div class="stat">
+      <span class="stat-k">本轮新增</span>
+      <span class="stat-v" id="sNew">—</span>
+      <span class="stat-n" id="sNewNote">—</span>
+    </div>
+  </section>
+
+  <section class="panel open" id="kwPanel">
+    <div class="panel-h" data-toggle>
+      <h3>监控关键词</h3>
+      <span class="cnt" id="kwCnt">—</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="panel-b">
+      <div class="kwlist" id="kwList"></div>
+      <div class="kwadd">
+        <input type="text" id="kwInput" placeholder="新增关键词，用 | 分隔同义词">
+        <input type="text" id="kwGroup" class="f-group" placeholder="分组（可选）">
+        <button class="btn" id="kwAdd">添加</button>
+      </div>
+      <p class="hint">
+        空格 = AND，竖线 = OR 同义词。例：<code>ChatGPT | GPT | #chatgpt</code> —— 只用第一个写法去搜索，命中任意一个即算相关。<br>
+        修改会写回 <code>keywords.txt</code>，下一轮采集生效。
+      </p>
+    </div>
+  </section>
+
+  <section class="panel" id="logPanel">
+    <div class="panel-h" data-toggle>
+      <h3>采集日志</h3>
+      <span class="cnt" id="logCnt">实时</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="panel-b">
+      <div class="logbox" id="logBox"><div><span class="t">--:--:--</span>等待数据…</div></div>
+    </div>
+  </section>
+
+  <section class="filters">
+    <div class="frow">
+      <span class="flabel">分组</span>
+      <div class="chips" id="catChips"></div>
+      <span class="spacer"></span>
+      <label class="sw"><input type="checkbox" id="onlyRel" checked>仅看相关</label>
+      <div class="seg" id="viewSeg">
+        <button data-v="card" class="on">卡片</button>
+        <button data-v="table">表格</button>
+      </div>
+    </div>
+    <div class="frow">
+      <span class="flabel">关键词</span>
+      <div class="chips" id="kwChips"></div>
+    </div>
+    <div class="frow">
+      <span class="flabel">筛选</span>
+      <input type="search" id="q" placeholder="搜索正文或作者…">
+      <label class="flabel" style="min-width:auto">最低互动</label>
+      <input type="range" id="minInt" min="0" max="500" step="10" value="0">
+      <span class="rng-v" id="minIntV">0</span>
+      <span class="spacer"></span>
+      <label class="flabel" style="min-width:auto">排序</label>
+      <select id="sort">
+        <option value="score">爆款评分</option>
+        <option value="velocity">上涨速度</option>
+        <option value="like_count">点赞数</option>
+        <option value="reply_count">回复数</option>
+        <option value="repost_count">转发数</option>
+        <option value="taken_at">最新发布</option>
+        <option value="first_seen">最新入库</option>
+      </select>
+      <button class="btn" id="reset">重置</button>
+      <button class="btn" id="expPosts" title="把当前筛选结果导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+    </div>
+  </section>
+
+  <div class="meta">
+    <span class="meta-n" id="rCount">—</span>
+    <span class="meta-t" id="rNote">条结果</span>
+  </div>
+
+  <div id="stage"></div>
+  </div><!-- /view-radar -->
+
+  <div id="view-peers" style="display:none">
+
+    <section class="coverage">
+      <div class="cv-main" id="cvMain">加载中…</div>
+      <div class="cv-stats" id="cvStats"></div>
+    </section>
+
+    <section class="filters">
+      <div class="frow">
+        <span class="flabel">分层</span>
+        <div class="chips" id="tierChips"></div>
+        <span class="spacer"></span>
+        <label class="sw"><input type="checkbox" id="onlyMulti">只看持续产出（≥2 帖）</label>
+        <div class="seg" id="pViewSeg">
+          <button data-v="table">表格</button>
+          <button data-v="card">卡片</button>
+        </div>
+      </div>
+      <div class="frow">
+        <span class="flabel">筛选</span>
+        <input type="search" id="aq" placeholder="搜索账号、主攻方向或关键词…">
+        <span class="spacer"></span>
+        <label class="flabel" style="min-width:auto">排序</label>
+        <select id="aSort">
+          <option value="hits">爆款数</option>
+          <option value="posts">相关帖数</option>
+          <option value="interactions">总互动</option>
+          <option value="avg_interactions">单帖均互动</option>
+          <option value="hit_rate">爆款率</option>
+          <option value="best_score">最高评分</option>
+          <option value="best_likes">最高点赞</option>
+          <option value="new_count">本轮新增</option>
+        </select>
+        <button class="btn" id="expAuthors" title="把当前同行榜导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+      </div>
+    </section>
+
+    <div class="meta">
+      <span class="meta-n" id="aCount">—</span>
+      <span class="meta-t" id="aNote">个账号</span>
+    </div>
+
+    <div id="aStage"></div>
+  </div><!-- /view-peers -->
+
+  <div id="view-watch" style="display:none">
+
+    <section class="coverage">
+      <div class="cv-main" id="wMain">加载中…</div>
+      <div class="cv-stats" id="wStats"></div>
+    </section>
+
+    <section class="panel open" id="wPanel">
+      <div class="panel-h" data-toggle>
+        <h3>添加关注账号</h3>
+        <span class="cnt" id="wCnt">—</span>
+        <span class="arrow">▾</span>
+      </div>
+      <div class="panel-b">
+        <div class="kwadd">
+          <input type="text" id="wInput" placeholder="Threads 账号，可粘贴 @账号 或主页链接">
+          <input type="text" id="wNote" class="f-narrow" placeholder="备注（可选）">
+          <button class="btn solid" id="wAdd">关注</button>
+        </div>
+        <p class="hint">
+          名单会写回 <code>watchlist.txt</code>，也可以直接在文件里加行（格式 <code>账号 | 备注</code>），重启后自动读入。<br>
+          关注只做「挑出来盯住」——账号得先被关键词命中入库，才会有帖数和爆款数；还没入库的账号先显示为 0。
+        </p>
+      </div>
+    </section>
+
+    <section class="filters">
+      <div class="frow">
+        <span class="flabel">筛选</span>
+        <input type="search" id="wq" placeholder="搜索账号、备注或主攻方向…">
+        <label class="sw"><input type="checkbox" id="wOnlyNew">只看有新帖</label>
+        <span class="spacer"></span>
+        <button class="btn" id="wExport" title="导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+        <label class="flabel" style="min-width:auto">排序</label>
+        <select id="wSort">
+          <option value="new_count">本轮新增</option>
+          <option value="interactions">总互动</option>
+          <option value="hits">爆款数</option>
+          <option value="posts">相关帖数</option>
+          <option value="last_at">最近活跃</option>
+          <option value="added_at">加入顺序</option>
+        </select>
+        <div class="seg" id="wViewSeg">
+          <button data-v="table">表格</button>
+          <button data-v="card">卡片</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="meta">
+      <span class="meta-n" id="wCount">—</span>
+      <span class="meta-t" id="wNoteTxt">个关注账号</span>
+    </div>
+
+    <div id="wStage"></div>
+  </div><!-- /view-watch -->
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="dw-head">
+    <span class="dw-title" id="dwTitle">—</span>
+    <button class="dw-x" id="dwClose">×</button>
+  </div>
+  <div class="dw-body" id="dwBody"></div>
+</aside>
+
+<script>
+(function(){
+  var TAGCOL = {"模型":"#2B8AAB","生图":"#A8556B","提示词":"#7A6B8C","视频":"#8C6B5E",
+                "Agent 与工具":"#6B7F5E","未分组":"#8A8A85"};
+  var P = [], STATUS = null, selCat = new Set(), selKw = new Set();
+  var q='', minInt=0, sortKey='score', view='card', onlyRel=true;
+
+  function n(x){return (x||0).toLocaleString('en-US');}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function ago(ts){ if(!ts) return '—';
+    var d=Date.now()/1000-ts;
+    if(d<60) return '刚刚';
+    if(d<3600) return Math.round(d/60)+' 分钟前';
+    if(d<86400) return Math.round(d/3600)+' 小时前';
+    if(d<86400*30) return Math.round(d/86400)+' 天前';
+    return Math.round(d/86400/30)+' 个月前';}
+  function tagOf(c){var col=TAGCOL[c]||TAGCOL['未分组'];
+    return '<span class="tag" style="color:'+col+'">'+esc(c)+'</span>';}
+  function total(p){return p.like_count+p.reply_count+p.repost_count+p.quote_count;}
+  function compact(x){x=x||0;
+    if(x>=1000000) return (x/1000000).toFixed(1)+'M';
+    if(x>=1000) return (x/1000).toFixed(1)+'K';
+    return String(x);}
+
+  /* ---------------- 面板折叠 ---------------- */
+  document.querySelectorAll('[data-toggle]').forEach(function(h){
+    h.onclick=function(){h.parentElement.classList.toggle('open');};
+  });
+
+  /* ---------------- 数据拉取 ---------------- */
+  function fetchPosts(){
+    fetch('/api/posts?limit=3000&only_relevant=0')
+      .then(function(r){return r.json();})
+      .then(function(d){ P = d.posts||[]; buildChips(); render(); })
+      .catch(function(){});
+  }
+
+  /* ---------------- chips ---------------- */
+  var kwCount={}, catCount={}, kwOrder=[];
+  function buildChips(){
+    kwCount={}; catCount={}; kwOrder=[];
+    P.forEach(function(p){
+      if(p.relevance!=='relevant' && onlyRel) return;
+      (p.keywords||[]).forEach(function(k){
+        if(!(k in kwCount)) kwOrder.push(k);
+        kwCount[k]=(kwCount[k]||0)+1;});
+      catCount[p.category]=(catCount[p.category]||0)+1;
+    });
+    kwOrder.sort(function(a,b){return kwCount[b]-kwCount[a];});
+
+    var kh=document.getElementById('kwChips');
+    kh.innerHTML=kwOrder.map(function(k){
+      return '<button class="chip'+(selKw.has(k)?' on':'')+'" data-v="'+esc(k)+'">'+
+             esc(k)+'<span class="n">'+kwCount[k]+'</span></button>';}).join('') ||
+      '<span class="hint">暂无关键词数据</span>';
+    bind(kh,selKw);
+
+    var cats=Object.keys(catCount).sort(function(a,b){return catCount[b]-catCount[a];});
+    var ch=document.getElementById('catChips');
+    ch.innerHTML=cats.map(function(c){
+      return '<button class="chip'+(selCat.has(c)?' on':'')+'" data-v="'+esc(c)+'">'+
+             esc(c)+'<span class="n">'+catCount[c]+'</span></button>';}).join('') ||
+      '<span class="hint">暂无</span>';
+    bind(ch,selCat);
+  }
+  function bind(host,sel){
+    host.querySelectorAll('.chip').forEach(function(b){
+      b.onclick=function(){
+        var v=b.dataset.v;
+        if(sel.has(v)){sel.delete(v);b.classList.remove('on');}
+        else{sel.add(v);b.classList.add('on');}
+        render();};
+    });
+  }
+
+  /* ---------------- 控件 ---------------- */
+  var rng=document.getElementById('minInt');
+  document.getElementById('q').oninput=function(e){q=e.target.value.toLowerCase();render();};
+  document.getElementById('sort').onchange=function(e){sortKey=e.target.value;render();};
+  document.getElementById('onlyRel').onchange=function(e){onlyRel=e.target.checked;buildChips();render();};
+  rng.oninput=function(e){minInt=+e.target.value;
+    document.getElementById('minIntV').textContent=minInt;render();};
+  document.querySelectorAll('#viewSeg button').forEach(function(b){
+    b.onclick=function(){view=b.dataset.v;
+      document.querySelectorAll('#viewSeg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');render();};});
+  document.getElementById('reset').onclick=function(){
+    selKw.clear();selCat.clear();q='';minInt=0;sortKey='score';
+    document.getElementById('q').value='';rng.value=0;
+    document.getElementById('minIntV').textContent='0';
+    document.getElementById('sort').value='score';
+    document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
+    render();};
+
+  /* ---------------- 渲染 ---------------- */
+  var stage=document.getElementById('stage');
+  function current(){
+    var list=P.filter(function(p){
+      if(onlyRel && p.relevance!=='relevant') return false;
+      if(total(p)<minInt) return false;
+      if(selCat.size && !selCat.has(p.category)) return false;
+      if(selKw.size && !(p.keywords||[]).some(function(k){return selKw.has(k);})) return false;
+      if(q && (p.text+' '+p.username).toLowerCase().indexOf(q)<0) return false;
+      return true;});
+    list.sort(function(a,b){return (b[sortKey]||0)-(a[sortKey]||0);});
+    return list;
+  }
+
+  function render(){
+    var list=current();
+    document.getElementById('rCount').textContent=list.length.toLocaleString('en-US');
+    document.getElementById('rNote').textContent='条结果 / 库内 '+P.length+' 条';
+    if(!list.length){
+      stage.innerHTML='<div class="empty">没有符合条件的帖子。<br>放宽「最低互动」，或点上方「立即采集」。</div>';
+      return;}
+    var mx=Math.max.apply(null,list.map(function(p){return p.score;}))||1;
+
+    if(view==='table'){
+      stage.innerHTML='<div class="tw"><table><thead><tr>'+
+        '<th style="width:40px">#</th><th style="width:62px">评分</th>'+
+        '<th style="width:62px">速度</th><th style="width:158px">作者</th>'+
+        '<th style="width:74px">分组</th>'+
+        '<th style="width:62px" class="num">赞</th><th style="width:52px" class="num">回</th>'+
+        '<th style="width:52px" class="num">转</th><th style="width:48px" class="num">引</th>'+
+        '<th>正文</th><th style="width:74px">发布</th></tr></thead><tbody>'+
+        list.map(function(p,i){
+          return '<tr data-c="'+esc(p.code)+'">'+
+          '<td class="mono" style="color:var(--faint)">'+(i+1)+'</td>'+
+          '<td class="mono" style="font-weight:500">'+p.score.toFixed(1)+'</td>'+
+          '<td class="mono" style="color:var(--accent)">'+(p.velocity||0).toFixed(1)+'</td>'+
+          '<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@'+esc(p.username)+
+            (p.verified?'<span class="vf"></span>':'')+
+            (p.is_new?' <span style="color:var(--accent);font-size:10px">NEW</span>':'')+'</td>'+
+          '<td>'+tagOf(p.category)+'</td>'+
+          '<td class="num mono">'+n(p.like_count)+'</td>'+
+          '<td class="num mono">'+n(p.reply_count)+'</td>'+
+          '<td class="num mono">'+n(p.repost_count)+'</td>'+
+          '<td class="num mono">'+n(p.quote_count)+'</td>'+
+          '<td class="tx">'+esc(String(p.text||'').replace(/\s+/g,' ').slice(0,110))+'</td>'+
+          '<td style="color:var(--faint);font-size:12px">'+ago(p.taken_at)+'</td></tr>';}).join('')+
+        '</tbody></table></div>';
+    }else{
+      stage.innerHTML='<div class="grid">'+list.map(function(p,i){
+        var feat=i<3;
+        return '<article class="post'+(feat?' feat':'')+'" data-c="'+esc(p.code)+'">'+
+          (p.is_new?'<span class="newbadge">NEW</span>':'')+
+          '<div class="p-head"><span class="p-rank">'+(i+1)+'</span>'+
+            '<div class="p-who"><div class="p-user">@'+esc(p.username)+
+              (p.verified?'<span class="vf"></span>':'')+'</div>'+
+              '<div class="p-time">'+ago(p.taken_at)+' · 速度 '+(p.velocity||0).toFixed(1)+'/h</div>'+
+            '</div></div>'+
+          '<p class="p-text">'+esc(p.text||'（无正文）')+'</p>'+
+          '<div class="p-metrics">'+
+            '<span>赞<b>'+n(p.like_count)+'</b></span>'+
+            '<span>回<b>'+n(p.reply_count)+'</b></span>'+
+            '<span>转<b>'+n(p.repost_count)+'</b></span>'+
+            '<span>引<b>'+n(p.quote_count)+'</b></span>'+
+          '</div>'+
+          '<div class="p-foot">'+tagOf(p.category)+
+            '<span class="score"><i>SCORE</i>'+p.score.toFixed(1)+'</span></div>'+
+          '<div class="bar"><i style="width:'+Math.max(2,p.score/mx*100)+'%"></i></div>'+
+        '</article>';}).join('')+'</div>';
+    }
+    stage.querySelectorAll('[data-c]').forEach(function(el){
+      el.onclick=function(){openDetail(el.dataset.c);};});
+  }
+
+  /* ---------------- 详情抽屉 ---------------- */
+  var mask=document.getElementById('mask'),drawer=document.getElementById('drawer');
+  function closeDetail(){mask.classList.remove('on');drawer.classList.remove('on');}
+  mask.onclick=closeDetail;
+  document.getElementById('dwClose').onclick=closeDetail;
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDetail();});
+
+  function openDetail(code){
+    var p=P.filter(function(x){return x.code===code;})[0];
+    if(!p) return;
+    document.getElementById('dwTitle').textContent='@'+p.username;
+    document.getElementById('dwBody').innerHTML='<div class="hint">加载中…</div>';
+    mask.classList.add('on');drawer.classList.add('on');
+
+    fetch('/api/post/'+encodeURIComponent(code)).then(function(r){return r.json();})
+    .then(function(d){
+      var m=[['点赞',d.like_count],['回复',d.reply_count],['转发',d.repost_count],['引用',d.quote_count]];
+      var g=d.growth||[], spark='';
+      if(g.length>1){
+        var vs=g.map(function(x){return x.like_count+x.reply_count+x.repost_count+x.quote_count;});
+        var mx=Math.max.apply(null,vs)||1, W=440, H=54;
+        var pts=vs.map(function(v,i){
+          return (i/(vs.length-1)*W).toFixed(1)+','+(H-v/mx*H).toFixed(1);}).join(' ');
+        spark='<div class="dw-sec"><h4>互动增长 · 共 '+g.length+' 次采样</h4>'+
+          '<div class="spark"><svg width="100%" viewBox="0 0 '+W+' '+(H+8)+'" preserveAspectRatio="none" '+
+          'style="height:64px">'+
+          '<polyline points="'+pts+'" fill="none" stroke="#2B8AAB" stroke-width="1.5"/></svg>'+
+          '<div class="hint">首次 '+g[0].like_count+' → 最新 '+vs[vs.length-1]+' 次互动</div></div></div>';
+      }
+      document.getElementById('dwBody').innerHTML=
+        '<div class="dw-metrics">'+m.map(function(x){
+          return '<div class="dwm"><b>'+n(x[1])+'</b><span>'+x[0]+'</span></div>';}).join('')+'</div>'+
+        '<div class="dw-sec" style="display:flex;gap:9px;align-items:center">'+
+          '<button class="btn" id="dwToAuthor" style="flex:1">看 @'+esc(d.username)+
+            ' 的全部相关帖 →</button>'+
+          starBtn(d.username)+
+        '</div>'+
+        '<div class="dw-sec" style="display:flex;gap:26px">'+
+          '<div><h4>爆款评分</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1">'+
+            d.score.toFixed(2)+'</div></div>'+
+          '<div><h4>上涨速度</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1;color:var(--accent)">'+
+            (d.velocity||0).toFixed(2)+'</div><div class="hint">互动 / 小时</div></div>'+
+        '</div>'+ spark +
+        '<div class="dw-sec"><h4>正文</h4><div class="dw-text">'+esc(d.text||'（无正文）')+'</div></div>'+
+        '<div class="dw-sec"><h4>属性</h4><div class="dw-kv">'+tagOf(d.category)+
+          '<span class="tag" style="color:var(--muted)">'+(d.has_image?'含图片':'纯文字')+'</span>'+
+          '<span class="tag" style="color:var(--muted)">'+ago(d.taken_at)+'</span>'+
+          '<span class="tag" style="color:var(--muted)">'+(d.lang||'未知语言')+'</span>'+
+          '<span class="tag" style="color:'+(d.relevance==='relevant'?'var(--live)':'var(--warn)')+'">'+
+            (d.relevance==='relevant'?'相关':d.relevance==='blocked'?'已屏蔽':'无关')+'</span>'+
+        '</div><div class="hint" style="margin-top:7px">判定依据：'+esc(d.relevance_note||'—')+'</div></div>'+
+        '<div class="dw-sec"><h4>命中关键词</h4><div class="dw-kv">'+
+          (d.keywords||[]).map(function(k){
+            return '<span class="chip on" style="cursor:default">'+esc(k)+'</span>';}).join('')+
+        '</div></div>'+
+        '<a class="dw-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">在 Threads 打开原帖 ↗</a>';
+
+      // 帖子 ⇄ 账号 双向跳转：都在同一个抽屉里换内容，不叠加路由，
+      // 所以从账号点回帖子不会有历史栈冲突。
+      var ta=document.getElementById('dwToAuthor');
+      if(ta) ta.onclick=function(){ openAuthor(d.username); };
+      bindStars(document.getElementById('dwBody'));
+    }).catch(function(){
+      document.getElementById('dwBody').innerHTML='<div class="hint">详情加载失败</div>';});
+  }
+
+  /* ---------------- 状态与实时 ---------------- */
+  var dot=document.getElementById('dot'), stateText=document.getElementById('stateText');
+  var nextPill=document.getElementById('nextPill'), countdown=document.getElementById('countdown');
+  var prog=document.getElementById('prog'), progBar=document.getElementById('progBar'),
+      progText=document.getElementById('progText');
+  var logBox=document.getElementById('logBox');
+  var lastNext=null;
+
+  function setState(s){
+    STATUS=s;
+    var st=s.stats||{};
+    document.getElementById('sRelevant').innerHTML=n(st.relevant)+'<em>条</em>';
+    document.getElementById('sTotalNote').textContent=
+      '库内共 '+n(st.total)+' 条（无关 '+n(st.offtopic)+' / 屏蔽 '+n(st.blocked)+'）';
+    document.getElementById('sAuthors').innerHTML=n(st.authors)+'<em>个</em>';
+    document.getElementById('sInter').innerHTML=compact(st.interactions);
+    document.getElementById('sInterNote').textContent='赞 '+compact(st.likes)+
+      ' · 回 '+compact(st.replies)+' · 转 '+compact(st.reposts)+' · 引 '+compact(st.quotes);
+    document.getElementById('sNew').innerHTML=n(st.new)+'<em>条</em>';
+    document.getElementById('sNewNote').textContent = st.top
+      ? ('最高分 @'+st.top.username+' '+Number(st.top.score).toFixed(1)) : '暂无数据';
+
+    document.getElementById('kwCnt').textContent=(s.keywords||[]).length+' 个';
+
+    // 通道告警：连通性出问题时必须显式说明，不能只靠日志里一行「页面异常」
+    var al=document.getElementById('chanAlert'), ch=s.channel||null, fails=s.consecutive_failures||0;
+    if(ch && !ch.ok){
+      al.classList.add('on');
+      document.getElementById('chanTitle').textContent=
+        '抓取通道异常：'+ch.reason+(fails>1?('（连续 '+fails+' 轮 0 条）'):'');
+      document.getElementById('chanDetail').innerHTML=
+        esc(ch.hint||'')+'<br>排查看：<code>/api/probe</code> 自检、代理是否可达 threads.com、'+
+        '是否该降低抓取频率（减少 serp_type 变体数）。';
+    }else if(s.paused_auto){
+      al.classList.add('on');
+      document.getElementById('chanTitle').textContent='已因通道故障自动暂停';
+      document.getElementById('chanDetail').innerHTML=
+        '连续多轮抓不到数据，为免加深封禁已自动停采。排查后点「恢复」继续。';
+    }else{
+      al.classList.remove('on');
+    }
+
+    if(s.paused){dot.className='dot off';stateText.textContent= s.paused_auto?'已熔断暂停':'已暂停';}
+    else if(ch && !ch.ok){dot.className='dot off';stateText.textContent='通道异常';}
+    else if(s.running_cycle){dot.className='dot busy';stateText.textContent='采集中…';}
+    else {dot.className='dot on';stateText.textContent='监控中';}
+
+    if(s.running_cycle && s.progress && s.progress.total){
+      prog.classList.add('on');
+      var pct=Math.round(s.progress.index/s.progress.total*100);
+      progBar.style.width=pct+'%';
+      progText.textContent=s.progress.index+'/'+s.progress.total+' · '+s.progress.keyword;
+    }else{prog.classList.remove('on');}
+
+    if(s.paused || s.next_run_at==null){ nextPill.style.display='none'; }
+    else { nextPill.style.display=''; lastNext=s.next_run_at; }
+
+    var sel=document.getElementById('intervalSel');
+    if(document.activeElement!==sel && s.interval_minutes){
+      var v=String(s.interval_minutes);
+      if(Array.from(sel.options).some(function(o){return o.value===v;})) sel.value=v;
+    }
+    document.getElementById('pauseBtn').textContent = s.paused?'恢复':'暂停';
+
+    if(s.logs){ logBox.innerHTML=s.logs.map(function(e){
+      return '<div'+(e.level&&e.level!=='info'?' class="'+e.level+'"':'')+'>'+
+        '<span class="t">'+esc(e.time)+'</span>'+esc(e.message)+'</div>';}).join('')
+      || '<div><span class="t">--:--:--</span>暂无日志</div>';
+      logBox.scrollTop=logBox.scrollHeight; }
+  }
+
+  setInterval(function(){
+    if(lastNext==null) return;
+    var s=Math.max(0,Math.round(lastNext-Date.now()/1000));
+    var m=Math.floor(s/60), ss=s%60;
+    countdown.textContent=m+':'+String(ss).padStart(2,'0');
+  },500);
+
+  function connect(){
+    var es=new EventSource('/api/stream');
+    es.addEventListener('status',function(ev){ try{setState(JSON.parse(ev.data));}catch(e){} });
+    es.addEventListener('message',function(ev){
+      var d; try{d=JSON.parse(ev.data);}catch(e){return;}
+      if(d.type==='log'){ addLog(d.entry); }
+      else if(d.type==='cycle_done'){ fetchPosts(); if(TAB==='peers') fetchAuthors();
+                                      if(TAB==='watch') fetchWatch(); }
+      else if(d.type==='cycle_start'){ fetchPosts(); }
+    });
+    es.onopen=function(){ stateText.textContent='监控中'; };
+    es.onerror=function(){
+      dot.className='dot off'; stateText.textContent='连接断开，重试中…';
+      es.close(); setTimeout(connect,3000);
+    };
+  }
+  var logLines=[];
+  function addLog(e){
+    logLines.push(e); if(logLines.length>200) logLines.shift();
+    logBox.innerHTML=logLines.map(function(x){
+      return '<div'+(x.level&&x.level!=='info'?' class="'+x.level+'"':'')+'>'+
+        '<span class="t">'+esc(x.time)+'</span>'+esc(x.message)+'</div>';}).join('');
+    logBox.scrollTop=logBox.scrollHeight;
+  }
+
+  /* ---------------- 视图切换 ---------------- */
+  var TAB='radar';
+  document.querySelectorAll('#tabs button').forEach(function(b){
+    b.onclick=function(){
+      TAB=b.dataset.t;
+      document.querySelectorAll('#tabs button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      document.getElementById('view-radar').style.display = TAB==='radar'?'':'none';
+      document.getElementById('view-peers').style.display = TAB==='peers'?'':'none';
+      document.getElementById('view-watch').style.display = TAB==='watch'?'':'none';
+      window.scrollTo(0,0);
+      if(TAB==='peers') fetchAuthors();
+      if(TAB==='watch') fetchWatch();
+    };
+  });
+
+  /* ---------------- 同行 / 竞品监控 ----------------
+     关键词榜回答「哪条帖子火了」，同行榜回答「谁在持续产出爆款」。
+     后者需要按作者聚合，并且必须做「持续度」过滤 —— 数据量小时绝大多数
+     账号只出现一次，不过滤的话榜单全是一次性爆款，看不出谁值得长期盯。 */
+  // 窄屏默认卡片：8 列的表在手机上横滑很难用，卡片是单列自适应，读起来顺得多。
+  var A=[], COV=null, selTier=null, onlyMulti=false, aq='', aSort='';
+  var WATCHED=new Set();          // 关注的账号名，用于渲染星标状态
+  var pView = window.innerWidth <= 860 ? 'card' : 'table';
+  var aStage=document.getElementById('aStage');
+
+  function fetchAuthors(){
+    var u='/api/authors?limit=800&min_posts='+(onlyMulti?2:1);
+    if(selTier) u+='&tier='+encodeURIComponent(selTier);
+    if(aSort) u+='&sort='+encodeURIComponent(aSort);
+    fetch(u).then(function(r){return r.json();}).then(function(d){
+      A=d.authors||[]; COV=d.coverage||null; aSort=d.sort||'hits';
+      if(d.hit_threshold) HIT_TH=d.hit_threshold;
+      document.getElementById('aSort').value=aSort;
+      renderCoverage(); renderTierChips(); renderPeers();
+    }).catch(function(){});
+  }
+
+  function renderCoverage(){
+    if(!COV) return;
+    var t=COV.by_tier||{}, r=Math.round((COV.multi_post_ratio||0)*100);
+    document.getElementById('cvMain').innerHTML=
+      '库内共 <b>'+n(COV.authors_total)+'</b> 个账号，其中只有 <b>'+n(COV.authors_multi_post)+
+      '</b> 个（'+r+'%）发过 ≥2 条相关帖，其余都是一次性出现的账号。'+
+      '<br><span style="color:var(--faint);font-size:12px">同行榜靠多轮采集累积：'+
+      '采集轮次越多，「持续产出」的账号才会浮出来。爆款阈值 = 单条互动 ≥ '+n(COV.hit_threshold)+'。</span>';
+    var items=[['core','核心监控'],['steady','持续产出'],['single_hit','单帖爆款'],['casual','偶发出现']];
+    document.getElementById('cvStats').innerHTML=items.map(function(x){
+      return '<div class="cv-s"><b>'+n(t[x[0]]||0)+'</b><span>'+x[1]+'</span></div>';}).join('');
+  }
+
+  function renderTierChips(){
+    var items=[['','全部'],['core','核心监控'],['steady','持续产出'],
+               ['single_hit','单帖爆款'],['casual','偶发出现']];
+    var h=document.getElementById('tierChips');
+    h.innerHTML=items.map(function(x){
+      return '<button class="chip'+((selTier||'')===x[0]?' on':'')+'" data-v="'+x[0]+'">'+
+             x[1]+'</button>';}).join('');
+    h.querySelectorAll('.chip').forEach(function(b){
+      b.onclick=function(){ selTier=b.dataset.v||null; aSort=''; fetchAuthors(); };});
+  }
+
+  function tierTag(t,label){return '<span class="tier '+esc(t)+'">'+esc(label)+'</span>';}
+  // 爆款阈值：/api/authors 会带回来，取不到时跟后端 store.HIT_THRESHOLD 保持同一个默认值
+  var HIT_TH=500;
+  // 没拿到同行榜聚合行时（从雷达页/关注名单进来），拿帖子现算一份，
+  // 字段名跟 /api/authors 对齐，后面的渲染逻辑就能共用一条路径。
+  function deriveAuthorMeta(u,ps){
+    var kw={}, Cat={}, likes=0, replies=0, reposts=0, quotes=0;
+    var best=0, bestLikes=0, lastAt=0, hits=0;
+    ps.forEach(function(p){
+      var l=p.like_count||0, r=p.reply_count||0, rp=p.repost_count||0, q=p.quote_count||0;
+      likes+=l; replies+=r; reposts+=rp; quotes+=q;
+      if(l+r+rp+q>=HIT_TH) hits++;
+      if((p.score||0)>best) best=p.score||0;
+      if(l>bestLikes) bestLikes=l;
+      if((p.taken_at||0)>lastAt) lastAt=p.taken_at||0;
+      if(p.category) Cat[p.category]=(Cat[p.category]||0)+1;
+      (p.keywords||[]).forEach(function(k){ kw[k]=(kw[k]||0)+1; });
+    });
+    var inter=likes+replies+reposts+quotes;
+    function top(o){
+      return Object.keys(o).sort(function(a,b){return o[b]-o[a];})
+        .slice(0,6).map(function(k){return {name:k,count:o[k]};});
+    }
+    return {username:u, posts:ps.length, hits:hits, likes:likes, replies:replies,
+            reposts:reposts, quotes:quotes, interactions:inter,
+            avg_interactions: ps.length? inter/ps.length : 0,
+            best_score:best, best_likes:bestLikes, last_at:lastAt,
+            verified:(ps[0]&&ps[0].verified)||0,
+            tier:'', tier_label:'', posts_per_week:null,
+            top_categories:top(Cat), top_keywords:top(kw)};
+  }
+  function starBtn(u,big){
+    var on=WATCHED.has(u);
+    return '<button class="star'+(on?' on':'')+'" data-w="'+esc(u)+'" '+
+      'title="'+(on?'取消关注':'加入关注名单')+'">'+(on?'★':'☆')+'</button>';
+  }
+  // 星标点击不能冒泡到行/卡片，否则会连带打开账号抽屉
+  function bindStars(host){
+    host.querySelectorAll('[data-w]').forEach(function(b){
+      b.onclick=function(e){ e.stopPropagation(); toggleWatch(b.dataset.w); };
+    });
+  }
+  function dirsOf(a){
+    return (a.top_categories||[]).slice(0,2).map(function(c){
+      return '<span class="d">'+esc(c.name)+'<i>'+c.count+'</i></span>';}).join('')
+      || '<span style="color:var(--faint)">—</span>';
+  }
+  function authorBlob(a){
+    return (a.username+' '+(a.top_categories||[]).map(function(c){return c.name;}).join(' ')
+      +' '+(a.top_keywords||[]).map(function(c){return c.name;}).join(' ')).toLowerCase();
+  }
+
+  function renderPeers(){
+    var list=A.filter(function(a){return !aq || authorBlob(a).indexOf(aq)>=0;});
+    document.getElementById('aCount').textContent=list.length.toLocaleString('en-US');
+    document.getElementById('aNote').textContent='个账号 / 载入 '+A.length+' 个';
+    if(!list.length){
+      aStage.innerHTML='<div class="empty">没有符合条件的账号。<br>'+
+        '数据少时先取消「只看持续产出」，或点上方「立即采集」多跑几轮。</div>';
+      return;}
+    var mx=Math.max.apply(null,list.map(function(a){return a.hits||0;}))||1;
+
+    if(pView==='card'){
+      aStage.innerHTML='<div class="authors">'+list.map(function(a){
+        return '<article class="acard" data-u="'+esc(a.username)+'">'+
+          '<div class="acard-h"><span class="acard-u">@'+esc(a.username)+
+            (a.verified?'<span class="vf"></span>':'')+'</span>'+
+            starBtn(a.username,true)+
+            tierTag(a.tier,a.tier_label)+'</div>'+
+          '<div class="acard-m">'+
+            '<span>帖<b>'+n(a.posts)+'</b></span>'+
+            '<span>爆款<b>'+n(a.hits)+'</b></span>'+
+            '<span>互动<b>'+compact(a.interactions)+'</b></span>'+
+            '<span>均<b>'+n(Math.round(a.avg_interactions))+'</b></span>'+
+          '</div>'+
+          '<div class="meter"><i style="width:'+Math.max(3,(a.hits||0)/mx*100)+'%"></i></div>'+
+          '<div class="dirs">'+dirsOf(a)+'</div>'+
+        '</article>';}).join('')+'</div>';
+    }else{
+      aStage.innerHTML='<div class="tw scrollx"><table><thead><tr>'+
+        '<th style="width:36px">#</th><th style="width:30px"></th><th style="width:182px">账号</th>'+
+        '<th style="width:88px">分层</th>'+
+        '<th style="width:56px" class="num">帖</th><th style="width:58px" class="num">爆款</th>'+
+        '<th style="width:66px" class="num c-hitrate">爆款率</th>'+
+        '<th style="width:78px" class="num">总互动</th>'+
+        '<th style="width:72px" class="num c-avg">均互动</th>'+
+        '<th style="width:70px" class="num nw c-best">最高分</th>'+
+        '<th class="nw">主攻方向</th><th style="width:86px" class="nw">最近活跃</th></tr></thead><tbody>'+
+        list.map(function(a,i){
+          return '<tr data-u="'+esc(a.username)+'">'+
+          '<td class="mono" style="color:var(--faint)">'+(i+1)+'</td>'+
+          '<td class="star-cell">'+starBtn(a.username)+'</td>'+
+          '<td class="usr">@'+esc(a.username)+(a.verified?'<span class="vf"></span>':'')+'</td>'+
+          '<td>'+tierTag(a.tier,a.tier_label)+'</td>'+
+          '<td class="num mono">'+n(a.posts)+'</td>'+
+          '<td class="num mono" style="font-weight:500">'+n(a.hits)+'</td>'+
+          '<td class="num mono c-hitrate">'+Math.round((a.hit_rate||0)*100)+'%</td>'+
+          '<td class="num mono">'+n(a.interactions)+'</td>'+
+          '<td class="num mono c-avg">'+n(Math.round(a.avg_interactions))+'</td>'+
+          '<td class="num mono c-best">'+(a.best_score!=null?a.best_score.toFixed(1):'—')+'</td>'+
+          '<td class="dirs">'+dirsOf(a)+'</td>'+
+          '<td class="when">'+ago(a.last_at)+'</td></tr>';}).join('')+
+        '</tbody></table></div>';
+    }
+    aStage.querySelectorAll('[data-u]').forEach(function(el){
+      el.onclick=function(){openAuthor(el.dataset.u);};});
+    bindStars(aStage);
+  }
+
+  function openAuthor(u){
+    var meta=A.filter(function(x){return x.username===u;})[0]||null;
+    document.getElementById('dwTitle').textContent='@'+u;
+    document.getElementById('dwBody').innerHTML='<div class="hint">加载中…</div>';
+    mask.classList.add('on');drawer.classList.add('on');
+
+    fetch('/api/author/'+encodeURIComponent(u)).then(function(r){return r.json();})
+    .then(function(d){
+      var ps=d.posts||[], html='';
+      html+='<div class="dw-sec" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+        '<button class="btn'+(WATCHED.has(u)?'':' solid')+'" id="dwFollow" data-u="'+esc(u)+'">'+
+          (WATCHED.has(u)?'★ 已关注':'☆ 关注该账号')+'</button>'+
+        '<span class="hint" id="dwFollowHint">'+
+          (WATCHED.has(u)?'在「关注名单」页可以集中查看':'加入后可在「关注名单」页集中查看')+
+        '</span></div>';
+      // 从雷达页或关注名单页进来时，同行榜可能还没加载过（A 为空），
+      // 这时用刚拿到的帖子现算一份聚合。否则抽屉里只剩一串帖子，
+      // 看起来像功能坏了——同一个入口在不同页点开不该差这么多。
+      if(!meta && ps.length) meta=deriveAuthorMeta(u,ps);
+      if(meta){
+        var m=[['相关帖',meta.posts],['爆款',meta.hits],
+               ['总互动',meta.interactions],['均互动',Math.round(meta.avg_interactions)]];
+        html+='<div class="dw-sec" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+          (meta.tier? tierTag(meta.tier,meta.tier_label):'')+
+          (meta.verified?'<span class="tag" style="color:var(--accent)">已认证</span>':'')+
+          (meta.last_at?'<span class="tag" style="color:var(--muted)">最近活跃 '+
+            ago(meta.last_at)+'</span>':'')+
+          (meta.posts_per_week!=null?'<span class="tag" style="color:var(--muted)">约 '+
+            meta.posts_per_week+' 帖/周</span>':'')+
+        '</div>'+
+        '<div class="dw-metrics">'+m.map(function(x){
+          return '<div class="dwm"><b>'+n(x[1])+'</b><span>'+x[0]+'</span></div>';}).join('')+'</div>';
+        html+='<div class="dw-sec"><h4>主攻方向</h4><div class="dw-kv">'+
+          ((meta.top_categories||[]).map(function(c){
+            return tagOf(c.name)+'<span class="hint" style="align-self:center">'+c.count+' 帖</span>';
+          }).join('') || '<span class="hint">—</span>')+'</div></div>';
+        html+='<div class="dw-sec"><h4>命中关键词</h4><div class="dw-kv">'+
+          ((meta.top_keywords||[]).map(function(c){
+            return '<span class="chip on" style="cursor:default">'+esc(c.name)+
+              '<span class="n">'+c.count+'</span></span>';}).join('') ||
+            '<span class="hint">—</span>')+'</div></div>';
+      }
+      html+='<div class="dw-sec"><h4>相关帖子 · '+ps.length+' 条</h4>'+
+        (ps.length? ps.map(function(p){
+          return '<div class="dw-text" style="margin-bottom:9px;cursor:pointer" data-c="'+esc(p.code)+'">'+
+            '<div style="display:flex;gap:10px;align-items:baseline;margin-bottom:7px">'+
+              '<span class="score" style="margin-left:0"><i>SCORE</i>'+p.score.toFixed(1)+'</span>'+
+              '<span class="hint" style="margin-left:auto">'+ago(p.taken_at)+'</span></div>'+
+            '<div style="font-size:13px;line-height:1.6;max-height:6.4em;overflow:hidden">'+
+              esc(String(p.text||'（无正文）').slice(0,420))+'</div>'+
+            '<div class="p-metrics" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">'+
+              '<span>赞<b>'+n(p.like_count)+'</b></span><span>回<b>'+n(p.reply_count)+'</b></span>'+
+              '<span>转<b>'+n(p.repost_count)+'</b></span><span>引<b>'+n(p.quote_count)+'</b></span>'+
+            '</div></div>';}).join('')
+          : '<div class="hint">没有相关帖。</div>')+'</div>';
+      document.getElementById('dwBody').innerHTML=html;
+      document.querySelectorAll('#dwBody [data-c]').forEach(function(el){
+        el.onclick=function(){openDetail(el.dataset.c);};});
+      var fb=document.getElementById('dwFollow');
+      if(fb) fb.onclick=function(){
+        var target=fb.dataset.u, was=WATCHED.has(target);
+        toggleWatch(target).then(function(){
+          var now=WATCHED.has(target);
+          fb.textContent = now?'★ 已关注':'☆ 关注该账号';
+          fb.className = 'btn'+(now?'':' solid');
+          var h=document.getElementById('dwFollowHint');
+          if(h) h.textContent = now?'在「关注名单」页可以集中查看'
+                                  : (was?'已从关注名单移除':'加入后可在「关注名单」页集中查看');
+        });
+      };
+    }).catch(function(){
+      document.getElementById('dwBody').innerHTML='<div class="hint">加载失败</div>';});
+  }
+
+  document.getElementById('aq').oninput=function(e){aq=e.target.value.toLowerCase();renderPeers();};
+  document.getElementById('onlyMulti').onchange=function(e){
+    onlyMulti=e.target.checked; aSort=''; fetchAuthors();};
+  document.getElementById('aSort').onchange=function(e){aSort=e.target.value; fetchAuthors();};
+  document.querySelectorAll('#pViewSeg button').forEach(function(b){
+    // 初始高亮跟随上面按屏宽定的默认值
+    b.classList.toggle('on', b.dataset.v === pView);
+    b.onclick=function(){ pView=b.dataset.v;
+      document.querySelectorAll('#pViewSeg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); renderPeers();};});
+
+  /* ---------------- 关注名单 ----------------
+     同行榜是「全站扫出来的排名」，关注名单是「我自己圈出来要盯的人」。
+     所以这一页不做分层筛选，只按「有没有新帖」和排序来组织 —— 打开就想
+     立刻知道：我盯的人里，谁刚发了新东西。 */
+  var W=[], WSUM=null, wq='', wOnlyNew=false, wSort='new_count';
+  var wView = window.innerWidth <= 860 ? 'card' : 'table';
+  var wStage=document.getElementById('wStage');
+
+  function fetchWatch(){
+    return fetch('/api/watchlist').then(function(r){return r.json();})
+      .then(function(d){
+        W=d.accounts||[]; WSUM=d.summary||null;
+        WATCHED=new Set(W.map(function(a){return a.username;}));
+        renderWatchCoverage(); renderWatch();
+        if(TAB==='peers') renderPeers();
+        return d;
+      }).catch(function(){});
+  }
+
+  // 关注 / 取关共用入口：同行页星标、账号抽屉按钮、关注名单页都在调它
+  function toggleWatch(u, note){
+    if(!u) return Promise.resolve();
+    var on=WATCHED.has(u);
+    var url = on ? ('/api/watchlist?username='+encodeURIComponent(u)) : '/api/watchlist';
+    var opt = on ? {method:'DELETE'}
+                 : {method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({username:u, note:note||''})};
+    return fetch(url,opt).then(function(r){return r.json();})
+      .then(function(d){
+        if(d&&d.ok===false){ alert(d.error||'操作失败'); return d; }
+        if(d&&d.accounts){
+          W=d.accounts; WSUM=d.summary||null;
+          WATCHED=new Set(W.map(function(a){return a.username;}));
+        }
+        renderWatchCoverage();
+        if(TAB==='watch') renderWatch();
+        if(TAB==='peers') renderPeers();
+        return d;
+      }).catch(function(){});
+  }
+
+  function renderWatchCoverage(){
+    if(!WSUM) return;
+    document.getElementById('wMain').innerHTML=
+      '正在盯 <b>'+n(WSUM.accounts)+'</b> 个账号，其中 <b>'+n(WSUM.with_new)+
+      '</b> 个本轮有新帖，共 <b>'+n(WSUM.new_posts)+'</b> 条新帖。'+
+      '<br><span style="color:var(--faint);font-size:12px">'+
+      '还没进过库的账号会先显示 0（关注只是标记，不是采集开关）。'+
+      '点账号名可看 TA 的全部相关帖；星标 ★ 也可以在「同行监控」页直接点。</span>';
+    var items=[['accounts','关注账号'],['with_posts','已有数据'],['with_new','有新帖'],
+               ['new_posts','本轮新帖'],['hits','累计爆款'],['interactions','总互动']];
+    document.getElementById('wStats').innerHTML=items.map(function(x){
+      return '<div class="cv-s"><b>'+n(WSUM[x[0]]||0)+'</b><span>'+x[1]+'</span></div>';}).join('');
+    document.getElementById('wCnt').textContent=WSUM.accounts+' 个';
+  }
+
+  function watchBlob(a){
+    return (a.username+' '+(a.note||'')+' '+
+      (a.top_categories||[]).map(function(c){return c.name;}).join(' ')+' '+
+      (a.top_keywords||[]).map(function(c){return c.name;}).join(' ')).toLowerCase();
+  }
+
+  function renderWatch(){
+    var list=W.filter(function(a){
+      if(wOnlyNew && !((a.new_count||0)>0)) return false;
+      if(wq && watchBlob(a).indexOf(wq)<0) return false;
+      return true;});
+    list.sort(function(a,b){
+      if(wSort==='added_at') return String(a.added_at||'').localeCompare(String(b.added_at||''));
+      return ((b[wSort]||0)-(a[wSort]||0));});
+
+    document.getElementById('wCount').textContent=list.length.toLocaleString('en-US');
+    document.getElementById('wNoteTxt').textContent=
+      '个关注账号 / 名单共 '+W.length+' 个';
+
+    if(!W.length){
+      wStage.innerHTML='<div class="empty">关注名单还是空的。<br>'+
+        '在上面的输入框填一个 Threads 账号，或去「同行监控」页点账号左边的 ☆。</div>';
+      return;}
+    if(!list.length){
+      wStage.innerHTML='<div class="empty">没有符合条件的关注账号。<br>'+
+        '取消「只看有新帖」，或清空搜索词试试。</div>';
+      return;}
+
+    if(wView==='card'){
+      wStage.innerHTML='<div class="authors">'+list.map(function(a){
+        return '<article class="acard" data-u="'+esc(a.username)+'">'+
+          '<div class="acard-h"><span class="acard-u">@'+esc(a.username)+
+            (a.verified?'<span class="vf"></span>':'')+
+            ((a.new_count||0)>0?'<span class="wbadge">+'+n(a.new_count)+'</span>':'')+
+            '</span>'+ tierTag(a.tier,a.tier_label)+'</div>'+
+          (a.note?'<div class="note" title="'+esc(a.note)+'">'+esc(a.note)+'</div>':'')+
+          '<div class="acard-m">'+
+            '<span>帖<b>'+n(a.posts)+'</b></span>'+
+            '<span>爆款<b>'+n(a.hits)+'</b></span>'+
+            '<span>互动<b>'+compact(a.interactions)+'</b></span>'+
+            '<span>新增<b class="'+((a.new_count||0)>0?'wnew':'wzero')+'">'+n(a.new_count)+'</b></span>'+
+          '</div>'+
+          '<div class="dirs">'+dirsOf(a)+'</div>'+
+          '<div class="acard-h" style="gap:8px">'+
+            '<span class="hint">'+(a.has_posts?('最近活跃 '+ago(a.last_at)):'还没进过库')+'</span>'+
+            '<button class="btn" style="margin-left:auto" data-rm="'+esc(a.username)+'">取消关注</button>'+
+          '</div>'+
+        '</article>';}).join('')+'</div>';
+    }else{
+      wStage.innerHTML='<div class="tw scrollx"><table><thead><tr>'+
+        '<th style="width:36px">#</th><th style="width:182px">账号</th>'+
+        '<th style="width:88px">分层</th>'+
+        '<th style="width:56px" class="num">帖</th><th style="width:58px" class="num">爆款</th>'+
+        '<th style="width:78px" class="num">总互动</th>'+
+        '<th style="width:72px" class="num">新增</th>'+
+        '<th class="nw">备注</th><th class="nw c-wdirs">主攻方向</th>'+
+        '<th style="width:86px" class="nw">最近活跃</th>'+
+        '<th style="width:56px"></th></tr></thead><tbody>'+
+        list.map(function(a,i){
+          var nc=a.new_count||0;
+          return '<tr data-u="'+esc(a.username)+'">'+
+          '<td class="mono" style="color:var(--faint)">'+(i+1)+'</td>'+
+          '<td class="usr">@'+esc(a.username)+(a.verified?'<span class="vf"></span>':'')+
+            (nc>0?'<span class="wbadge">+'+n(nc)+'</span>':'')+'</td>'+
+          '<td>'+tierTag(a.tier,a.tier_label)+'</td>'+
+          '<td class="num mono">'+n(a.posts)+'</td>'+
+          '<td class="num mono" style="font-weight:500">'+n(a.hits)+'</td>'+
+          '<td class="num mono">'+n(a.interactions)+'</td>'+
+          '<td class="num mono '+(nc>0?'wnew':'wzero')+'">'+n(nc)+'</td>'+
+          '<td class="dirs" title="'+esc(a.note||'')+'">'+(a.note?esc(a.note):'<span style="color:var(--faint)">—</span>')+'</td>'+
+          '<td class="dirs c-wdirs">'+dirsOf(a)+'</td>'+
+          '<td class="when">'+(a.has_posts?ago(a.last_at):'—')+'</td>'+
+          '<td><button class="rmx" data-rm="'+esc(a.username)+'" title="取消关注">×</button></td>'+
+          '</tr>';}).join('')+
+        '</tbody></table></div>';
+    }
+    wStage.querySelectorAll('[data-u]').forEach(function(el){
+      el.onclick=function(){openAuthor(el.dataset.u);};});
+    wStage.querySelectorAll('[data-rm]').forEach(function(b){
+      b.onclick=function(e){ e.stopPropagation();
+        var u=b.dataset.rm;
+        if(!confirm('把 @'+u+' 从关注名单移除？')) return;
+        toggleWatch(u);};
+    });
+  }
+
+  document.getElementById('wq').oninput=function(e){wq=e.target.value.toLowerCase();renderWatch();};
+  document.getElementById('wOnlyNew').onchange=function(e){wOnlyNew=e.target.checked;renderWatch();};
+  document.getElementById('wSort').onchange=function(e){wSort=e.target.value;renderWatch();};
+  document.querySelectorAll('#wViewSeg button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.v === wView);
+    b.onclick=function(){ wView=b.dataset.v;
+      document.querySelectorAll('#wViewSeg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); renderWatch();};});
+  function addWatchFromForm(){
+    var v=document.getElementById('wInput').value.trim();
+    if(!v){ document.getElementById('wInput').focus(); return; }
+    var note=document.getElementById('wNote').value.trim();
+    toggleWatch(v,note).then(function(d){
+      if(d&&d.ok){
+        document.getElementById('wInput').value='';
+        document.getElementById('wNote').value='';
+        if(TAB!=='watch'){
+          document.querySelectorAll('#tabs button').forEach(function(x){
+            if(x.dataset.t==='watch') x.click();});
+        }
+      }
+    });
+  }
+  document.getElementById('wAdd').onclick=addWatchFromForm;
+  document.getElementById('wInput').addEventListener('keydown',function(e){
+    if(e.key==='Enter') addWatchFromForm();});
+  document.getElementById('wNote').addEventListener('keydown',function(e){
+    if(e.key==='Enter') addWatchFromForm();});
+
+  /* ---------------- CSV 导出 ----------------
+     导出的是「当前屏幕上这份」——筛选、排序、搜索词全都带上，
+     否则用户筛完一片再导出却拿到全量，是最容易被骂的那种不一致。
+     服务端另有 /api/export 供批量/脚本调用。 */
+  function csvCell(v){
+    var s=String(v==null?'':v);
+    return /[",\r\n]/.test(s) ? ('"'+s.replace(/"/g,'""')+'"') : s;
+  }
+  function pad2(x){return String(x).padStart(2,'0');}
+  function stamp(){
+    var d=new Date();
+    return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+
+           '_'+pad2(d.getHours())+pad2(d.getMinutes());
+  }
+  function fmtT(ts){
+    if(!ts || typeof ts!=='number') return ts?String(ts).slice(0,16):'';
+    var d=new Date(ts*1000);
+    return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+
+           ' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+  }
+  function downloadCsv(filename, header, rows){
+    var lines=[header.map(csvCell).join(',')];
+    rows.forEach(function(r){ lines.push(r.map(csvCell).join(',')); });
+    // \ufeff 是给 Excel 的 UTF-8 BOM：不加的话中文会按 GBK 解码成乱码
+    var blob=new Blob(['\ufeff'+lines.join('\r\n')+'\r\n'],
+                      {type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1500);
+  }
+  function exportPosts(){
+    var list=current();
+    if(!list.length){ alert('当前没有可导出的结果'); return; }
+    downloadCsv('threads_爆款帖子_'+stamp()+'.csv',
+      ['排名','帖子ID','账号','分组','爆款评分','上涨速度','点赞','回复','转发','引用',
+       '总互动','发布时间','命中关键词','正文','链接'],
+      list.map(function(p,i){
+        return [i+1,p.code,'@'+p.username,p.category,(p.score||0).toFixed(2),
+          (p.velocity||0).toFixed(2),p.like_count,p.reply_count,p.repost_count,
+          p.quote_count,total(p),fmtT(p.taken_at),
+          (p.keywords||[]).join(' / '),
+          String(p.text||'').replace(/\s+/g,' '),p.url];}));
+  }
+  function exportAuthors(){
+    var list=A.filter(function(a){return !aq || authorBlob(a).indexOf(aq)>=0;});
+    if(!list.length){ alert('当前没有可导出的结果'); return; }
+    downloadCsv('threads_同行账号_'+stamp()+'.csv',
+      ['排名','账号','分层','相关帖数','爆款数','爆款率','点赞','回复','转发','引用',
+       '总互动','单帖均互动','最高评分','最高点赞','本轮新增','最近活跃',
+       '活跃天数','约帖/周','主攻方向','命中关键词'],
+      list.map(function(a,i){
+        return [i+1,'@'+a.username,a.tier_label||'',a.posts,a.hits,
+          Math.round((a.hit_rate||0)*100)+'%',a.likes,a.replies,a.reposts,a.quotes,
+          a.interactions,Math.round(a.avg_interactions),
+          (a.best_score!=null?a.best_score.toFixed(2):''),a.best_likes,
+          a.new_count,ago(a.last_at),a.active_days,
+          (a.posts_per_week!=null?a.posts_per_week:''),
+          (a.top_categories||[]).map(function(c){return c.name+'('+c.count+')';}).join(' / '),
+          (a.top_keywords||[]).map(function(c){return c.name+'('+c.count+')';}).join(' / ')];}));
+  }
+  function exportWatch(){
+    var list=W.filter(function(a){
+      if(wOnlyNew && !((a.new_count||0)>0)) return false;
+      if(wq && watchBlob(a).indexOf(wq)<0) return false;
+      return true;});
+    if(!list.length){ alert('当前没有可导出的结果'); return; }
+    downloadCsv('threads_关注名单_'+stamp()+'.csv',
+      ['排名','账号','分层','相关帖数','爆款数','爆款率','总互动','本轮新增',
+       '最近活跃','备注','主攻方向','命中关键词','加入时间'],
+      list.map(function(a,i){
+        return [i+1,'@'+a.username,a.tier_label||'',a.posts,a.hits,
+          Math.round((a.hit_rate||0)*100)+'%',a.interactions,a.new_count,
+          ago(a.last_at),a.note||'',
+          (a.top_categories||[]).map(function(c){return c.name+'('+c.count+')';}).join(' / '),
+          (a.top_keywords||[]).map(function(c){return c.name+'('+c.count+')';}).join(' / '),
+          a.added_at||''];}));
+  }
+  document.getElementById('expPosts').onclick=exportPosts;
+  document.getElementById('expAuthors').onclick=exportAuthors;
+  document.getElementById('wExport').onclick=exportWatch;
+
+  /* ---------------- 关键词管理 ---------------- */
+  function renderKw(list){
+    document.getElementById('kwList').innerHTML=list.map(function(k){
+      return '<span class="kw">'+(k.grp?'<span class="g">'+esc(k.grp)+'</span>':'')+
+        esc(k.keyword)+'<button class="x" data-k="'+esc(k.keyword)+'" title="删除">×</button></span>';
+    }).join('') || '<span class="hint">还没有关键词，在下面添加</span>';
+    document.querySelectorAll('#kwList .x').forEach(function(b){
+      b.onclick=function(){
+        if(!confirm('删除关键词「'+b.dataset.k+'」？')) return;
+        fetch('/api/keywords?keyword='+encodeURIComponent(b.dataset.k),{method:'DELETE'})
+          .then(function(r){return r.json();})
+          .then(function(d){ if(d.keywords) renderKw(d.keywords); });
+      };});
+  }
+  document.getElementById('kwAdd').onclick=function(){
+    var v=document.getElementById('kwInput').value.trim();
+    if(!v) return;
+    fetch('/api/keywords',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({keyword:v,group:document.getElementById('kwGroup').value.trim()})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok){ document.getElementById('kwInput').value='';
+          document.getElementById('kwGroup').value=''; renderKw(d.keywords); }
+        else alert(d.error||'添加失败');});
+  };
+  document.getElementById('kwInput').addEventListener('keydown',function(e){
+    if(e.key==='Enter') document.getElementById('kwAdd').click();});
+
+  /* ---------------- 控制按钮 ---------------- */
+  document.getElementById('collectBtn').onclick=function(){
+    fetch('/api/collect',{method:'POST'}).then(function(r){return r.json();})
+      .then(function(d){ if(!d.ok) alert(d.message); });};
+  document.getElementById('pauseBtn').onclick=function(){
+    var paused=STATUS&&STATUS.paused;
+    fetch(paused?'/api/resume':'/api/pause',{method:'POST'}).then(function(){});
+  };
+  document.getElementById('intervalSel').onchange=function(e){
+    fetch('/api/interval',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({minutes:+e.target.value})}).then(function(){});
+  };
+
+  var probeBtns=[document.getElementById('probeBtn'),document.getElementById('probeBtn2')];
+  probeBtns.forEach(function(b){
+    if(!b) return;
+    b.onclick=function(){
+      probeBtns.forEach(function(x){if(x){x.disabled=true;x.textContent='自检中…';}});
+      fetch('/api/probe',{method:'POST'}).then(function(r){return r.json();})
+        .then(function(d){
+          probeBtns.forEach(function(x){if(x){x.disabled=false;}});
+          probeBtns[0].textContent='通道自检'; probeBtns[1].textContent='自检';
+          alert(d.ok
+            ? ('通道正常\n拿到 '+d.bytes+' 字节，解析出 '+d.posts+' 条帖子')
+            : ('通道不通\n原因：'+d.reason+'\n'+(d.hint||'')+'\n\n'+(d.detail||'')));
+          fetch('/api/status').then(function(r){return r.json();}).then(setState);
+        })
+        .catch(function(){
+          probeBtns.forEach(function(x){if(x){x.disabled=false;}});
+          probeBtns[0].textContent='通道自检'; probeBtns[1].textContent='自检';
+        });
+    };
+  });
+
+  /* ---------------- 启动 ---------------- */
+  fetch('/api/keywords').then(function(r){return r.json();})
+    .then(function(d){ renderKw(d.keywords||[]); });
+  fetchWatch();
+  fetchPosts();
+  fetch('/api/status').then(function(r){return r.json();}).then(setState).catch(function(){});
+  connect();
+  setInterval(fetchPosts, 60000);
+})();
+</script>
+</body>
+</html>
