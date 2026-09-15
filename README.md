@@ -25,6 +25,7 @@
 
 - **真·实时**：常驻进程按间隔自动采集，页面走 SSE 推送，采集完立即刷新，不用手动点
 - **四个互动指标齐全**：点赞 / 回复 / 转发 / 引用，一个都不少（官方 API 拿不到这些）
+- **带缩略图**：列表 / 卡片 / 详情三处都能看图，并标出这条是纯文字 / 单图 / 多图 / 视频 —— 判断爆款不用逐条点开
 - **上涨速度单列**：`互动量 / 小时`，看的是「正在涨」而不是「历史总量高」
 - **互动增长曲线**：每次采集写一条快照，详情里能看到一条帖子的增长轨迹
 - **通道健康检查 + 熔断**：失败原因分类到具体理由，连续零产出自动停，不硬敲被封的出口
@@ -41,7 +42,7 @@
 |---|---|
 | **关键词雷达**<br>哪条帖子正在火 · 统计卡 + 关键词管理 + 分组产出 | **同行监控**<br>谁在持续产出爆款 · 持续度分层 + 表格/卡片双视图 |
 | ![关键词雷达](docs/radar.png) | ![同行监控](docs/peers.png) |
-| **关注名单**<br>我盯的人里谁刚发了新东西 · 有新增的排最前 | **帖子详情抽屉**<br>爆款评分 · 上涨速度 · 互动增长曲线 · 命中关键词 |
+| **关注名单**<br>我盯的人里谁刚发了新东西 · 有新增的排最前 | **帖子详情抽屉**<br>主图 · 爆款评分 · 上涨速度 · 互动增长曲线 · 命中关键词 |
 | ![关注名单](docs/watchlist.png) | ![帖子详情](docs/post-drawer.png) |
 
 ---
@@ -497,6 +498,10 @@ urllib.error.URLError: Tunnel connection failed: 502 Bad Gateway
 
 数据库：`data/radar.db`，五张表 `posts` / `snapshots` / `runs` / `keywords` / `watchlist`。
 
+> **从旧版本升级不用做任何事，直接覆盖文件、重启即可。** 启动时会自动给 `posts` 补 `thumb` 列
+> 并修正存量 `has_image`（`ALTER TABLE` + 一条 `UPDATE`，幂等、不删数据）。
+> 唯一不会凭空恢复的是老帖的缩略图 URL——当年没存过，只能等它被再次采集到时回填。
+
 ### HTTP 接口
 
 | 方法 | 路径 | 说明 |
@@ -524,6 +529,12 @@ urllib.error.URLError: Tunnel connection failed: 502 Bad Gateway
 `/api/watchlist` 的账号名做了归一化：`@Xxx`、`https://www.threads.com/@Xxx/?hl=zh`、
 `threads.net/@Xxx/` 都会统一成小写 `xxx`；不归一化的话 `@SomeOne` 和 `someone`
 会在名单里变成两行。
+
+`/api/posts` 与 `/api/post/<code>` 每条都带这几个媒体字段：
+`media_type`（`19`=纯文字 / `1`=单图 / `8`=多图 / `2`=视频）、
+`has_image`（该帖是否有图）、`thumb`（缩略图 URL，无图时为 `null`）。
+**视频帖的 `media_type` 是 `2`，但缩略图里放的是封面帧**——所以「有图」不等于「是图片帖」，
+判断帖子类型要看 `media_type`。
 
 `/api/authors` 的 `sort` 可选：`hits` / `posts` / `interactions` / `avg_interactions` /
 `hit_rate` / `best_score` / `best_likes` / `new_count`。不传时按分层给默认值——

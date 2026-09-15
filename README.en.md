@@ -25,6 +25,7 @@ Every view can export whatever you're currently looking at as CSV (opens cleanly
 
 - **Actually real-time**: a resident process collects on an interval, the page gets updates over SSE, and the leaderboard refreshes the moment a cycle finishes — no manual clicking
 - **All four engagement metrics**: likes / replies / reposts / quotes — the official API doesn't give you these
+- **Thumbnails**: images render in the list, card, and detail views, each post labelled text-only / single image / carousel / video — no need to open every post to judge what's trending
 - **Velocity as its own column**: `interactions / hour`, so you see what's *rising*, not just what's historically big
 - **Engagement growth curves**: every cycle writes a snapshot, so a post's growth is visible in its detail drawer
 - **Channel health checks + circuit breaker**: failures are classified by actual cause, and repeated empty cycles stop the monitor instead of hammering a blocked exit
@@ -41,7 +42,7 @@ Every view can export whatever you're currently looking at as CSV (opens cleanly
 |---|---|
 | **Keyword radar**<br>which post is hot · stat cards + keyword management | **Peer monitoring**<br>who keeps producing hits · tiers + table/card views |
 | ![Keyword radar](docs/radar.png) | ![Peer monitoring](docs/peers.png) |
-| **Watchlist**<br>who I follow just posted something · new ones float to the top | **Post detail drawer**<br>score · velocity · growth curve · matched keywords |
+| **Watchlist**<br>who I follow just posted something · new ones float to the top | **Post detail drawer**<br>media · score · velocity · growth curve · matched keywords |
 | ![Watchlist](docs/watchlist.png) | ![Post detail](docs/post-drawer.png) |
 
 ---
@@ -524,6 +525,12 @@ exports and scripted use — not limited to the 3,000 rows the browser keeps in 
 
 Database: `data/radar.db`, with five tables — `posts` / `snapshots` / `runs` / `keywords` / `watchlist`.
 
+> **Upgrading from an older version needs nothing from you — overwrite the files and restart.** On startup
+> the app adds the `thumb` column to `posts` and corrects the existing `has_image` values
+> (an `ALTER TABLE` plus one `UPDATE`; idempotent, deletes nothing). The one thing that can't be conjured
+> back is the thumbnail URL of old posts — it was never stored, so it backfills only when those posts get
+> collected again.
+
 ### HTTP API
 
 | Method | Path | Description |
@@ -551,6 +558,12 @@ Database: `data/radar.db`, with five tables — `posts` / `snapshots` / `runs` /
 Account handles in `/api/watchlist` are normalized: `@Xxx`, `https://www.threads.com/@Xxx/?hl=zh`, and
 `threads.net/@Xxx/` all collapse to lowercase `xxx`. Without normalization, `@SomeOne` and `someone`
 would show up as two separate rows.
+
+Every post from `/api/posts` and `/api/post/<code>` carries three media fields:
+`media_type` (`19` = text-only / `1` = single image / `8` = carousel / `2` = video),
+`has_image`, and `thumb` (the thumbnail URL, `null` when there is no image).
+**A video post has `media_type` `2`, but its thumbnail is the cover frame** — so "has an image"
+does not mean "is an image post". Use `media_type` to tell post types apart.
 
 `sort` for `/api/authors` accepts `hits` / `posts` / `interactions` / `avg_interactions` / `hit_rate` /
 `best_score` / `best_likes` / `new_count`. When omitted, a per-tier default applies — core/steady tiers
