@@ -24,7 +24,7 @@ if "%PY%"=="" (
 
 echo 使用 Python：%PY%
 echo 服务端口：8650  （如被占用，改 .env 里的 RADAR_PORT）
-echo 停止服务：按 Ctrl+C
+echo Stop server: Ctrl+C
 echo.
 
 %PY% server.py
