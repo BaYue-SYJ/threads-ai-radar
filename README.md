@@ -730,8 +730,8 @@ python refilter.py
 
 ---
 
-Community
-| [**shuixian-prompts**](https://linux.do) | Linux.Do /— Share, discuss, and follow development with the community. |
+### Community
+| [**Linux.Do**](https://linux.do) | Linux.Do /— Share, discuss, and follow development with the community. |
 
 ## 许可
 
