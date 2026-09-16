@@ -731,7 +731,9 @@ python refilter.py
 > 원인 파악이 훨씬 빠릅니다.
 
 ---
+### 社区
 
+| [**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
 ## 라이선스
 
 [MIT License](LICENSE) © 2026 BaYue-SYJ
