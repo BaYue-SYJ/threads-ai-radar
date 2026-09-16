@@ -730,7 +730,9 @@ python refilter.py
 > 如果確實是 bug，把介面頂部告警條裡的 `reason` 一起發我，定位會快很多。
 
 ---
+### 社区
 
+| [**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
 ## 授權
 
 [MIT License](LICENSE) © 2026 BaYue-SYJ
