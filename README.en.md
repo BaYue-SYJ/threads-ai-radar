@@ -1,4 +1,4 @@
-[**简体中文**](README.md) | **English**
+[**简体中文**](README.md) | **English** | [**繁體中文**](README.zh-TW.md) | [**日本語**](README.ja.md) | [**한국어**](README.ko.md)
 
 # Threads Radar · Real-time Keyword Monitoring
 
@@ -520,7 +520,7 @@ exports and scripted use — not limited to the 3,000 rows the browser keeps in 
 | `web/index.html` | Frontend (single file) |
 | `docs/` | Screenshots used by the README |
 | `tools/` | Development regression scripts (optional, needs Node — see the deploy section) |
-| `README.md` | Chinese documentation (switchable from the top) |
+| `README.md` / `README.en.md` / `README.zh-TW.md` / `README.ja.md` / `README.ko.md` | Documentation in five languages (switchable from the top) |
 | `LICENSE` | MIT |
 
 Database: `data/radar.db`, with five tables — `posts` / `snapshots` / `runs` / `keywords` / `watchlist`.

@@ -1,4 +1,4 @@
-**简体中文** | [**English**](README.en.md)
+**简体中文** | [**English**](README.en.md) | [**繁體中文**](README.zh-TW.md) | [**日本語**](README.ja.md) | [**한국어**](README.ko.md)
 
 # Threads 爆款雷达 · 实时关键词监控
 
@@ -493,7 +493,7 @@ urllib.error.URLError: Tunnel connection failed: 502 Bad Gateway
 | `web/index.html` | 前端界面（单文件） |
 | `docs/` | README 用的界面截图 |
 | `tools/` | 开发期回归脚本（可选，需 Node，详见上文「部署」节） |
-| `README.en.md` | 英文版说明（顶部可中英切换） |
+| `README.md` / `README.en.md` / `README.zh-TW.md` / `README.ja.md` / `README.ko.md` | 五语版说明（顶部可切换） |
 | `LICENSE` | MIT |
 
 数据库：`data/radar.db`，五张表 `posts` / `snapshots` / `runs` / `keywords` / `watchlist`。
