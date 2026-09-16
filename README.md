@@ -731,7 +731,8 @@ python refilter.py
 ---
 
 ###社区
-[**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
+
+| [**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
 
 ## 许可
 
