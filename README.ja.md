@@ -731,7 +731,9 @@ python refilter.py
 > 原因特定が格段に速くなります。
 
 ---
+### 社区
 
+| [**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
 ## ライセンス
 
 [MIT License](LICENSE) © 2026 BaYue-SYJ
