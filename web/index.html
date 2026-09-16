@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Threads 爆款雷达 · 实时关键词监控</title>
+<script src="i18n.js"></script>
 <!-- 内联 favicon：否则浏览器会去请求 /favicon.ico 拿 404，控制台平白多条报错 -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316302F'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%232B8AAB'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232B8AAB' stroke-width='1.4' opacity='.55'/%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%232B8AAB' stroke-width='1' opacity='.25'/%3E%3C/svg%3E">
 <style>
@@ -26,7 +27,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   display:flex;align-items:center;gap:22px}
 .brand{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:none}
 .brand-mark{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:.02em;line-height:1.1}
-.brand-sub{font-size:11px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase}
+/* 副标题原本是全拉丁大写（THREADS · LIVE KEYWORD MONITOR），靠 uppercase + 大字距撑气质。
+   现在五种语言都可能出现汉字/假名/韩文，uppercase 对 CJK 无效、大字距又会让 CJK 松散发虚，
+   所以改成只留一点点字距，让五种语言看起来是同一套排版。 */
+.brand-sub{font-size:11px;color:var(--faint);letter-spacing:.04em}
 
 .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
   border-radius:100px;padding:6px 14px;font-size:12.5px;color:var(--muted);flex:none}
@@ -44,6 +48,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.solid{background:var(--ink);border-color:var(--ink);color:#fff}
 .btn.solid:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#fff}
+/* 语言选择器：口吻比采集间隔那一排更轻，避免跟主操作抢注意力。
+   宽度写死是因为「繁體中文 / 한국어」切来切去会让整排控件左右跳。 */
+.langsel{font-size:12.5px;padding:6px 8px;width:104px}
 
 /* ---------- shell ---------- */
 .shell{max-width:1360px;margin:0 auto;padding:30px 36px 90px}
@@ -365,28 +372,29 @@ input.f-group{min-width:130px;max-width:130px}
 <nav class="nav">
   <div class="nav-inner">
     <div class="brand">
-      <span class="brand-mark">爆款雷达</span>
-      <span class="brand-sub">Threads · live keyword monitor</span>
+      <span class="brand-mark" data-i18n="brand">爆款雷达</span>
+      <span class="brand-sub" data-i18n="brand_sub">Threads · 实时关键词监控</span>
     </div>
     <div class="tabs" id="tabs">
-      <button data-t="radar" class="on">关键词雷达</button>
-      <button data-t="peers">同行监控</button>
-      <button data-t="watch">关注名单</button>
+      <button data-t="radar" class="on" data-i18n="tab_radar">关键词雷达</button>
+      <button data-t="peers" data-i18n="tab_peers">同行监控</button>
+      <button data-t="watch" data-i18n="tab_watch">关注名单</button>
     </div>
-    <span class="pill"><span class="dot" id="dot"></span><span id="stateText">连接中…</span></span>
-    <span class="pill" id="nextPill" style="display:none">下次采集 <b id="countdown">—</b></span>
+    <span class="pill"><span class="dot" id="dot"></span><span id="stateText" data-i18n="state_connecting">连接中…</span></span>
+    <span class="pill" id="nextPill" style="display:none"><span data-i18n="next_run">下次采集</span> <b id="countdown">—</b></span>
     <div class="nav-right">
-      <select id="intervalSel" title="采集间隔">
-        <option value="5">每 5 分钟</option>
-        <option value="10">每 10 分钟</option>
-        <option value="15">每 15 分钟</option>
-        <option value="30">每 30 分钟</option>
-        <option value="60">每 1 小时</option>
-        <option value="180">每 3 小时</option>
+      <select id="langSel" class="langsel" data-i18n-title="lang_label" aria-label="Language"></select>
+      <select id="intervalSel" data-i18n-title="interval_title" title="采集间隔">
+        <option value="5" data-i18n="interval_5">每 5 分钟</option>
+        <option value="10" data-i18n="interval_10">每 10 分钟</option>
+        <option value="15" data-i18n="interval_15">每 15 分钟</option>
+        <option value="30" data-i18n="interval_30">每 30 分钟</option>
+        <option value="60" data-i18n="interval_60">每 1 小时</option>
+        <option value="180" data-i18n="interval_180">每 3 小时</option>
       </select>
-      <button class="btn" id="probeBtn2" title="自检抓取通道">自检</button>
-      <button class="btn" id="pauseBtn">暂停</button>
-      <button class="btn solid" id="collectBtn">立即采集</button>
+      <button class="btn" id="probeBtn2" data-i18n-title="btn_probe_title" data-i18n="btn_probe" title="自检抓取通道">自检</button>
+      <button class="btn" id="pauseBtn" data-i18n="btn_pause">暂停</button>
+      <button class="btn solid" id="collectBtn" data-i18n="btn_collect">立即采集</button>
     </div>
   </div>
 </nav>
@@ -394,7 +402,7 @@ input.f-group{min-width:130px;max-width:130px}
 <div class="shell">
 
   <div class="prog" id="prog">
-    <span class="prog-t">正在采集</span>
+    <span class="prog-t" data-i18n="prog_running">正在采集</span>
     <span class="prog-bar"><i id="progBar"></i></span>
     <span class="prog-n" id="progText">—</span>
   </div>
@@ -403,30 +411,30 @@ input.f-group{min-width:130px;max-width:130px}
   <div class="alert" id="chanAlert">
     <span class="alert-ic">✕</span>
     <div class="alert-b">
-      <div class="alert-t" id="chanTitle">抓取通道异常</div>
+      <div class="alert-t" id="chanTitle" data-i18n="alert_channel_bad">抓取通道异常</div>
       <div class="alert-d" id="chanDetail">—</div>
     </div>
-    <button class="btn" id="probeBtn">通道自检</button>
+    <button class="btn" id="probeBtn" data-i18n="btn_probe_channel">通道自检</button>
   </div>
 
   <section class="overview">
     <div class="stat lead">
-      <span class="stat-k">相关帖子</span>
+      <span class="stat-k" data-i18n="stat_relevant">相关帖子</span>
       <span class="stat-v" id="sRelevant">—</span>
       <span class="stat-n" id="sTotalNote">—</span>
     </div>
     <div class="stat">
-      <span class="stat-k">覆盖账号</span>
+      <span class="stat-k" data-i18n="stat_authors">覆盖账号</span>
       <span class="stat-v" id="sAuthors">—</span>
-      <span class="stat-n">按作者去重</span>
+      <span class="stat-n" data-i18n="stat_authors_note">按作者去重</span>
     </div>
     <div class="stat">
-      <span class="stat-k">总互动量</span>
+      <span class="stat-k" data-i18n="stat_inter">总互动量</span>
       <span class="stat-v" id="sInter">—</span>
-      <span class="stat-n" id="sInterNote">赞 + 回 + 转 + 引</span>
+      <span class="stat-n" id="sInterNote" data-i18n="stat_inter_note">赞 + 回 + 转 + 引</span>
     </div>
     <div class="stat">
-      <span class="stat-k">本轮新增</span>
+      <span class="stat-k" data-i18n="stat_new">本轮新增</span>
       <span class="stat-v" id="sNew">—</span>
       <span class="stat-n" id="sNewNote">—</span>
     </div>
@@ -434,18 +442,18 @@ input.f-group{min-width:130px;max-width:130px}
 
   <section class="panel open" id="kwPanel">
     <div class="panel-h" data-toggle>
-      <h3>监控关键词</h3>
+      <h3 data-i18n="panel_keywords">监控关键词</h3>
       <span class="cnt" id="kwCnt">—</span>
       <span class="arrow">▾</span>
     </div>
     <div class="panel-b">
       <div class="kwlist" id="kwList"></div>
       <div class="kwadd">
-        <input type="text" id="kwInput" placeholder="新增关键词，用 | 分隔同义词">
-        <input type="text" id="kwGroup" class="f-group" placeholder="分组（可选）">
-        <button class="btn" id="kwAdd">添加</button>
+        <input type="text" id="kwInput" data-i18n-ph="kw_ph" placeholder="新增关键词，用 | 分隔同义词">
+        <input type="text" id="kwGroup" class="f-group" data-i18n-ph="kw_group_ph" placeholder="分组（可选）">
+        <button class="btn" id="kwAdd" data-i18n="btn_add">添加</button>
       </div>
-      <p class="hint">
+      <p class="hint" data-i18n="kw_hint">
         空格 = AND，竖线 = OR 同义词。例：<code>ChatGPT | GPT | #chatgpt</code> —— 只用第一个写法去搜索，命中任意一个即算相关。<br>
         修改会写回 <code>keywords.txt</code>，下一轮采集生效。
       </p>
@@ -454,55 +462,55 @@ input.f-group{min-width:130px;max-width:130px}
 
   <section class="panel" id="logPanel">
     <div class="panel-h" data-toggle>
-      <h3>采集日志</h3>
-      <span class="cnt" id="logCnt">实时</span>
+      <h3 data-i18n="panel_log">采集日志</h3>
+      <span class="cnt" id="logCnt" data-i18n="log_live">实时</span>
       <span class="arrow">▾</span>
     </div>
     <div class="panel-b">
-      <div class="logbox" id="logBox"><div><span class="t">--:--:--</span>等待数据…</div></div>
+      <div class="logbox" id="logBox"><div><span class="t">--:--:--</span><span data-i18n="log_waiting">等待数据…</span></div></div>
     </div>
   </section>
 
   <section class="filters">
     <div class="frow">
-      <span class="flabel">分组</span>
+      <span class="flabel" data-i18n="flt_group">分组</span>
       <div class="chips" id="catChips"></div>
       <span class="spacer"></span>
-      <label class="sw"><input type="checkbox" id="onlyRel" checked>仅看相关</label>
+      <label class="sw"><input type="checkbox" id="onlyRel" checked><span data-i18n="flt_only_relevant">仅看相关</span></label>
       <div class="seg" id="viewSeg">
-        <button data-v="card" class="on">卡片</button>
-        <button data-v="table">表格</button>
+        <button data-v="card" class="on" data-i18n="flt_view_card">卡片</button>
+        <button data-v="table" data-i18n="flt_view_table">表格</button>
       </div>
     </div>
     <div class="frow">
-      <span class="flabel">关键词</span>
+      <span class="flabel" data-i18n="flt_keyword">关键词</span>
       <div class="chips" id="kwChips"></div>
     </div>
     <div class="frow">
-      <span class="flabel">筛选</span>
-      <input type="search" id="q" placeholder="搜索正文或作者…">
-      <label class="flabel" style="min-width:auto">最低互动</label>
+      <span class="flabel" data-i18n="flt_filter">筛选</span>
+      <input type="search" id="q" data-i18n-ph="flt_search_posts" placeholder="搜索正文或作者…">
+      <label class="flabel" style="min-width:auto" data-i18n="flt_min_inter">最低互动</label>
       <input type="range" id="minInt" min="0" max="500" step="10" value="0">
       <span class="rng-v" id="minIntV">0</span>
       <span class="spacer"></span>
-      <label class="flabel" style="min-width:auto">排序</label>
+      <label class="flabel" style="min-width:auto" data-i18n="flt_sort">排序</label>
       <select id="sort">
-        <option value="score">爆款评分</option>
-        <option value="velocity">上涨速度</option>
-        <option value="like_count">点赞数</option>
-        <option value="reply_count">回复数</option>
-        <option value="repost_count">转发数</option>
-        <option value="taken_at">最新发布</option>
-        <option value="first_seen">最新入库</option>
+        <option value="score" data-i18n="sort_score">爆款评分</option>
+        <option value="velocity" data-i18n="sort_velocity">上涨速度</option>
+        <option value="like_count" data-i18n="sort_likes">点赞数</option>
+        <option value="reply_count" data-i18n="sort_replies">回复数</option>
+        <option value="repost_count" data-i18n="sort_reposts">转发数</option>
+        <option value="taken_at" data-i18n="sort_taken">最新发布</option>
+        <option value="first_seen" data-i18n="sort_seen">最新入库</option>
       </select>
-      <button class="btn" id="reset">重置</button>
-      <button class="btn" id="expPosts" title="把当前筛选结果导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+      <button class="btn" id="reset" data-i18n="btn_reset">重置</button>
+      <button class="btn" id="expPosts" data-i18n-title="btn_export_posts_title" data-i18n="btn_export" title="把当前筛选结果导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
     </div>
   </section>
 
   <div class="meta">
     <span class="meta-n" id="rCount">—</span>
-    <span class="meta-t" id="rNote">条结果</span>
+    <span class="meta-t" id="rNote" data-i18n="unit_results">条结果</span>
   </div>
 
   <div id="stage"></div>
@@ -511,43 +519,43 @@ input.f-group{min-width:130px;max-width:130px}
   <div id="view-peers" style="display:none">
 
     <section class="coverage">
-      <div class="cv-main" id="cvMain">加载中…</div>
+      <div class="cv-main" id="cvMain" data-i18n="loading">加载中…</div>
       <div class="cv-stats" id="cvStats"></div>
     </section>
 
     <section class="filters">
       <div class="frow">
-        <span class="flabel">分层</span>
+        <span class="flabel" data-i18n="flt_tier">分层</span>
         <div class="chips" id="tierChips"></div>
         <span class="spacer"></span>
-        <label class="sw"><input type="checkbox" id="onlyMulti">只看持续产出（≥2 帖）</label>
+        <label class="sw"><input type="checkbox" id="onlyMulti"><span data-i18n="flt_only_multi">只看持续产出（≥2 帖）</span></label>
         <div class="seg" id="pViewSeg">
-          <button data-v="table">表格</button>
-          <button data-v="card">卡片</button>
+          <button data-v="table" data-i18n="flt_view_table">表格</button>
+          <button data-v="card" data-i18n="flt_view_card">卡片</button>
         </div>
       </div>
       <div class="frow">
-        <span class="flabel">筛选</span>
-        <input type="search" id="aq" placeholder="搜索账号、主攻方向或关键词…">
+        <span class="flabel" data-i18n="flt_filter">筛选</span>
+        <input type="search" id="aq" data-i18n-ph="flt_search_authors" placeholder="搜索账号、主攻方向或关键词…">
         <span class="spacer"></span>
-        <label class="flabel" style="min-width:auto">排序</label>
+        <label class="flabel" style="min-width:auto" data-i18n="flt_sort">排序</label>
         <select id="aSort">
-          <option value="hits">爆款数</option>
-          <option value="posts">相关帖数</option>
-          <option value="interactions">总互动</option>
-          <option value="avg_interactions">单帖均互动</option>
-          <option value="hit_rate">爆款率</option>
-          <option value="best_score">最高评分</option>
-          <option value="best_likes">最高点赞</option>
-          <option value="new_count">本轮新增</option>
+          <option value="hits" data-i18n="sort_hits">爆款数</option>
+          <option value="posts" data-i18n="sort_posts">相关帖数</option>
+          <option value="interactions" data-i18n="sort_inter">总互动</option>
+          <option value="avg_interactions" data-i18n="sort_avg_inter">单帖均互动</option>
+          <option value="hit_rate" data-i18n="sort_hit_rate">爆款率</option>
+          <option value="best_score" data-i18n="sort_best_score">最高评分</option>
+          <option value="best_likes" data-i18n="sort_best_likes">最高点赞</option>
+          <option value="new_count" data-i18n="sort_new">本轮新增</option>
         </select>
-        <button class="btn" id="expAuthors" title="把当前同行榜导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+        <button class="btn" id="expAuthors" data-i18n-title="btn_export_authors_title" data-i18n="btn_export" title="把当前同行榜导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
       </div>
     </section>
 
     <div class="meta">
       <span class="meta-n" id="aCount">—</span>
-      <span class="meta-t" id="aNote">个账号</span>
+      <span class="meta-t" id="aNote" data-i18n="unit_accounts">个账号</span>
     </div>
 
     <div id="aStage"></div>
@@ -556,23 +564,23 @@ input.f-group{min-width:130px;max-width:130px}
   <div id="view-watch" style="display:none">
 
     <section class="coverage">
-      <div class="cv-main" id="wMain">加载中…</div>
+      <div class="cv-main" id="wMain" data-i18n="loading">加载中…</div>
       <div class="cv-stats" id="wStats"></div>
     </section>
 
     <section class="panel open" id="wPanel">
       <div class="panel-h" data-toggle>
-        <h3>添加关注账号</h3>
+        <h3 data-i18n="w_panel_title">添加关注账号</h3>
         <span class="cnt" id="wCnt">—</span>
         <span class="arrow">▾</span>
       </div>
       <div class="panel-b">
         <div class="kwadd">
-          <input type="text" id="wInput" placeholder="Threads 账号，可粘贴 @账号 或主页链接">
-          <input type="text" id="wNote" class="f-narrow" placeholder="备注（可选）">
-          <button class="btn solid" id="wAdd">关注</button>
+          <input type="text" id="wInput" data-i18n-ph="w_ph" placeholder="Threads 账号，可粘贴 @账号 或主页链接">
+          <input type="text" id="wNote" class="f-narrow" data-i18n-ph="w_note_ph" placeholder="备注（可选）">
+          <button class="btn solid" id="wAdd" data-i18n="btn_follow">关注</button>
         </div>
-        <p class="hint">
+        <p class="hint" data-i18n="w_hint">
           名单会写回 <code>watchlist.txt</code>，也可以直接在文件里加行（格式 <code>账号 | 备注</code>），重启后自动读入。<br>
           关注只做「挑出来盯住」——账号得先被关键词命中入库，才会有帖数和爆款数；还没入库的账号先显示为 0。
         </p>
@@ -581,30 +589,30 @@ input.f-group{min-width:130px;max-width:130px}
 
     <section class="filters">
       <div class="frow">
-        <span class="flabel">筛选</span>
-        <input type="search" id="wq" placeholder="搜索账号、备注或主攻方向…">
-        <label class="sw"><input type="checkbox" id="wOnlyNew">只看有新帖</label>
+        <span class="flabel" data-i18n="flt_filter">筛选</span>
+        <input type="search" id="wq" data-i18n-ph="flt_search_watch" placeholder="搜索账号、备注或主攻方向…">
+        <label class="sw"><input type="checkbox" id="wOnlyNew"><span data-i18n="flt_only_new">只看有新帖</span></label>
         <span class="spacer"></span>
-        <button class="btn" id="wExport" title="导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
-        <label class="flabel" style="min-width:auto">排序</label>
+        <button class="btn" id="wExport" data-i18n-title="btn_export_watch_title" data-i18n="btn_export" title="导出为 CSV，可直接用 Excel 打开">导出 CSV</button>
+        <label class="flabel" style="min-width:auto" data-i18n="flt_sort">排序</label>
         <select id="wSort">
-          <option value="new_count">本轮新增</option>
-          <option value="interactions">总互动</option>
-          <option value="hits">爆款数</option>
-          <option value="posts">相关帖数</option>
-          <option value="last_at">最近活跃</option>
-          <option value="added_at">加入顺序</option>
+          <option value="new_count" data-i18n="sort_new">本轮新增</option>
+          <option value="interactions" data-i18n="sort_inter">总互动</option>
+          <option value="hits" data-i18n="sort_hits">爆款数</option>
+          <option value="posts" data-i18n="sort_posts">相关帖数</option>
+          <option value="last_at" data-i18n="sort_last">最近活跃</option>
+          <option value="added_at" data-i18n="sort_added">加入顺序</option>
         </select>
         <div class="seg" id="wViewSeg">
-          <button data-v="table">表格</button>
-          <button data-v="card">卡片</button>
+          <button data-v="table" data-i18n="flt_view_table">表格</button>
+          <button data-v="card" data-i18n="flt_view_card">卡片</button>
         </div>
       </div>
     </section>
 
     <div class="meta">
       <span class="meta-n" id="wCount">—</span>
-      <span class="meta-t" id="wNoteTxt">个关注账号</span>
+      <span class="meta-t" id="wNoteTxt" data-i18n="unit_accounts">个关注账号</span>
     </div>
 
     <div id="wStage"></div>
@@ -622,6 +630,33 @@ input.f-group{min-width:130px;max-width:130px}
 
 <script>
 (function(){
+  /* 多语言入口。T() 取词、I18N.ago() 出相对时间、I18N.applyStatic() 刷静态文案。
+     字典在 i18n.js 里，五语键集合一致（已用脚本核对过占位符）。
+
+     注意：这里不能用 `var T = window.I18N.T`。下面 setState 里那句
+     `x ? T('…') : T('…')` 依赖函数声明会被提升（hoisted），
+     而 `I18N.onLangChange` 又在脚本末尾才注册 —— 中间任何一次
+     提前调用都会撞上 TDZ 抛 "Cannot read properties of undefined"。 */
+  var I18N = window.I18N;
+  function T(key, vars){ return I18N.T(key, vars); }
+  /* 同上的道理：setState 需要能在脚本跑到一半时就被调起来 */
+  function setState(s){ renderStatus(s); }
+
+  /* 「分组名」这一类值不翻译。理由：分组名同时是 keywords.txt / categories.json 里的
+     数据值（模型 / 生图 / 提示词 / 视频 / Agent 与工具…），把它译成 Category 只是好看，
+     代价是用户拿界面上的词去文件里搜不到 —— 而且用户完全可以自定义分组名，
+     那些自定义值本来就不在字典里，译一半留一半会让同一个下拉框里中英混杂。
+     唯一例外是后端兜底值「未分组」：它不是用户写的，只是个占位符，应当跟界面语言走。
+     分类的「中文名」要显示成多语言，走 CATLABEL（只用于筛选条的说明文案，不动数据值）。 */
+  function tv(v){
+    if(v==null || v==='') return v;
+    v = I18N.unesc(String(v));            /* 接口里可能是 \u5217 这种转义串 */
+    if(v==='未分组') return T('cat_ungrouped');
+    return v;
+  }
+
+  /* 分类配色表。键是 keywords.txt 里的中文分组名（数据侧的值，不能翻），
+     所以按原样保留；只有「未分组」这个兜底项要显示成当前语言。 */
   var TAGCOL = {"模型":"#2B8AAB","生图":"#A8556B","提示词":"#7A6B8C","视频":"#8C6B5E",
                 "Agent 与工具":"#6B7F5E","未分组":"#8A8A85"};
   var P = [], STATUS = null, selCat = new Set(), selKw = new Set();
@@ -630,20 +665,22 @@ input.f-group{min-width:130px;max-width:130px}
   function n(x){return (x||0).toLocaleString('en-US');}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  /* 量词后缀（条 / 个）只在中日韩显示；英文里 "12 results" 再加一个字就是错的。
+     I18N 里 en 的这两个键是空串，拼上去自然消失。 */
+  /* 单位词。中文/日文/韩文里「3 条」需要量词，英文里就是「3」——
+     所以英文的 unit_posts / unit_accounts 是空串，表示「这个语言不写单位」。
+     空串时不能输出一字不差的 <em></em>：那样虽然看不见，但会留下一个空元素，
+     而且把所有译文都渲染成空字符串的地方就分不清「设计如此」和「漏翻了」。
+     改成空串直接不输出，语义上更干净，也让静态校验能把空译文判成可疑项。 */
+  function em(unit){var t=T(unit);return t?('<em>'+t+'</em>'):'';}
   function ago(ts){ if(!ts) return '—';
-    var d=Date.now()/1000-ts;
-    if(d<60) return '刚刚';
-    if(d<3600) return Math.round(d/60)+' 分钟前';
-    if(d<86400) return Math.round(d/3600)+' 小时前';
-    if(d<86400*30) return Math.round(d/86400)+' 天前';
-    return Math.round(d/86400/30)+' 个月前';}
+    return I18N.ago(Date.now()/1000-ts); }
   function tagOf(c){var col=TAGCOL[c]||TAGCOL['未分组'];
-    return '<span class="tag" style="color:'+col+'">'+esc(c)+'</span>';}
-  function total(p){return p.like_count+p.reply_count+p.repost_count+p.quote_count;}
+    return '<span class="tag" style="color:'+col+'">'+esc(tv(c))+'</span>';}  function total(p){return p.like_count+p.reply_count+p.repost_count+p.quote_count;}
   /* media_type 的 Threads 语义：19=纯文字 / 1=单图 / 8=多图 / 2=视频。
      注意视频帖也带 image_versions2（那是封面图），所以「有图」不等于「是图片帖」。 */
   function mediaLabel(mt){
-    return mt===19?'纯文字':mt===1?'单图':mt===8?'多图':mt===2?'视频':'未知媒体';}
+    return mt===19?T('media_text'):mt===1?T('media_image'):mt===8?T('media_carousel'):mt===2?T('media_video'):T('media_unknown');}
   function thumbImg(p,cls){
     if(!p.thumb) return '';
     return '<img class="'+cls+'" src="'+esc(p.thumb)+'" alt="" loading="lazy" '+
@@ -683,15 +720,15 @@ input.f-group{min-width:130px;max-width:130px}
     kh.innerHTML=kwOrder.map(function(k){
       return '<button class="chip'+(selKw.has(k)?' on':'')+'" data-v="'+esc(k)+'">'+
              esc(k)+'<span class="n">'+kwCount[k]+'</span></button>';}).join('') ||
-      '<span class="hint">暂无关键词数据</span>';
+      '<span class="hint">'+T('kw_no_data')+'</span>';
     bind(kh,selKw);
 
     var cats=Object.keys(catCount).sort(function(a,b){return catCount[b]-catCount[a];});
     var ch=document.getElementById('catChips');
     ch.innerHTML=cats.map(function(c){
       return '<button class="chip'+(selCat.has(c)?' on':'')+'" data-v="'+esc(c)+'">'+
-             esc(c)+'<span class="n">'+catCount[c]+'</span></button>';}).join('') ||
-      '<span class="hint">暂无</span>';
+             esc(tv(c))+'<span class="n">'+catCount[c]+'</span></button>';}).join('') ||
+      '<span class="hint">'+T('stat_empty')+'</span>';
     bind(ch,selCat);
   }
   function bind(host,sel){
@@ -705,6 +742,7 @@ input.f-group{min-width:130px;max-width:130px}
   }
 
   /* ---------------- 控件 ---------------- */
+  /* 勾选项文字在 <span> 里，点 label 任意处都能触发 —— 保持原生 label 行为 */
   var rng=document.getElementById('minInt');
   document.getElementById('q').oninput=function(e){q=e.target.value.toLowerCase();render();};
   document.getElementById('sort').onchange=function(e){sortKey=e.target.value;render();};
@@ -740,20 +778,20 @@ input.f-group{min-width:130px;max-width:130px}
   function render(){
     var list=current();
     document.getElementById('rCount').textContent=list.length.toLocaleString('en-US');
-    document.getElementById('rNote').textContent='条结果 / 库内 '+P.length+' 条';
+    document.getElementById('rNote').innerHTML=T('meta_posts',{n:n(P.length)});
     if(!list.length){
-      stage.innerHTML='<div class="empty">没有符合条件的帖子。<br>放宽「最低互动」，或点上方「立即采集」。</div>';
+      stage.innerHTML='<div class="empty">'+T('empty_posts')+'</div>';
       return;}
     var mx=Math.max.apply(null,list.map(function(p){return p.score;}))||1;
 
     if(view==='table'){
       stage.innerHTML='<div class="tw"><table><thead><tr>'+
-        '<th style="width:40px">#</th><th style="width:62px">评分</th>'+
-        '<th style="width:62px">速度</th><th style="width:158px">作者</th>'+
-        '<th style="width:74px">分组</th>'+
-        '<th style="width:62px" class="num">赞</th><th style="width:52px" class="num">回</th>'+
-        '<th style="width:52px" class="num">转</th><th style="width:48px" class="num">引</th>'+
-        '<th>正文</th><th style="width:74px">发布</th></tr></thead><tbody>'+
+        '<th style="width:40px">#</th><th style="width:62px">'+T('th_score')+'</th>'+
+        '<th style="width:62px">'+T('th_velocity')+'</th><th style="width:158px">'+T('th_author')+'</th>'+
+        '<th style="width:74px">'+T('flt_group')+'</th>'+
+        '<th style="width:62px" class="num">'+T('th_likes')+'</th><th style="width:52px" class="num">'+T('th_replies')+'</th>'+
+        '<th style="width:52px" class="num">'+T('th_reposts')+'</th><th style="width:48px" class="num">'+T('th_quotes')+'</th>'+
+        '<th>'+T('th_text')+'</th><th style="width:74px">'+T('th_published')+'</th></tr></thead><tbody>'+
         list.map(function(p,i){
           return '<tr data-c="'+esc(p.code)+'">'+
           '<td class="mono" style="color:var(--faint)">'+(i+1)+'</td>'+
@@ -779,15 +817,15 @@ input.f-group{min-width:130px;max-width:130px}
           '<div class="p-head"><span class="p-rank">'+(i+1)+'</span>'+
             '<div class="p-who"><div class="p-user">@'+esc(p.username)+
               (p.verified?'<span class="vf"></span>':'')+'</div>'+
-              '<div class="p-time">'+ago(p.taken_at)+' · 速度 '+(p.velocity||0).toFixed(1)+'/h</div>'+
+              '<div class="p-time">'+ago(p.taken_at)+T('speed_suffix',{v:(p.velocity||0).toFixed(1)})+'</div>'+
             '</div></div>'+
           thumbImg(p,'p-img')+
-          '<p class="p-text">'+esc(p.text||'（无正文）')+'</p>'+
+          '<p class="p-text">'+esc(p.text||T('no_text'))+'</p>'+
           '<div class="p-metrics">'+
-            '<span>赞<b>'+n(p.like_count)+'</b></span>'+
-            '<span>回<b>'+n(p.reply_count)+'</b></span>'+
-            '<span>转<b>'+n(p.repost_count)+'</b></span>'+
-            '<span>引<b>'+n(p.quote_count)+'</b></span>'+
+            '<span>'+T('m_like')+'<b>'+n(p.like_count)+'</b></span>'+
+            '<span>'+T('m_reply')+'<b>'+n(p.reply_count)+'</b></span>'+
+            '<span>'+T('m_repost')+'<b>'+n(p.repost_count)+'</b></span>'+
+            '<span>'+T('m_quote')+'<b>'+n(p.quote_count)+'</b></span>'+
           '</div>'+
           '<div class="p-foot">'+tagOf(p.category)+
             '<span class="score"><i>SCORE</i>'+p.score.toFixed(1)+'</span></div>'+
@@ -809,52 +847,52 @@ input.f-group{min-width:130px;max-width:130px}
     var p=P.filter(function(x){return x.code===code;})[0];
     if(!p) return;
     document.getElementById('dwTitle').textContent='@'+p.username;
-    document.getElementById('dwBody').innerHTML='<div class="hint">加载中…</div>';
+    document.getElementById('dwBody').innerHTML='<div class="hint">'+T('loading')+'</div>';
     mask.classList.add('on');drawer.classList.add('on');
 
     fetch('/api/post/'+encodeURIComponent(code)).then(function(r){return r.json();})
     .then(function(d){
-      var m=[['点赞',d.like_count],['回复',d.reply_count],['转发',d.repost_count],['引用',d.quote_count]];
+      var m=[[T('m_likes'),d.like_count],[T('m_replies'),d.reply_count],
+             [T('m_reposts'),d.repost_count],[T('m_quotes'),d.quote_count]];
       var g=d.growth||[], spark='';
       if(g.length>1){
         var vs=g.map(function(x){return x.like_count+x.reply_count+x.repost_count+x.quote_count;});
         var mx=Math.max.apply(null,vs)||1, W=440, H=54;
         var pts=vs.map(function(v,i){
           return (i/(vs.length-1)*W).toFixed(1)+','+(H-v/mx*H).toFixed(1);}).join(' ');
-        spark='<div class="dw-sec"><h4>互动增长 · 共 '+g.length+' 次采样</h4>'+
+        spark='<div class="dw-sec"><h4>'+T('dw_growth',{n:g.length})+'</h4>'+
           '<div class="spark"><svg width="100%" viewBox="0 0 '+W+' '+(H+8)+'" preserveAspectRatio="none" '+
           'style="height:64px">'+
           '<polyline points="'+pts+'" fill="none" stroke="#2B8AAB" stroke-width="1.5"/></svg>'+
-          '<div class="hint">首次 '+g[0].like_count+' → 最新 '+vs[vs.length-1]+' 次互动</div></div></div>';
+          '<div class="hint">'+T('dw_growth_range',{first:g[0].like_count,last:vs[vs.length-1]})+'</div></div></div>';
       }
       document.getElementById('dwBody').innerHTML=
         '<div class="dw-metrics">'+m.map(function(x){
           return '<div class="dwm"><b>'+n(x[1])+'</b><span>'+x[0]+'</span></div>';}).join('')+'</div>'+
         '<div class="dw-sec" style="display:flex;gap:9px;align-items:center">'+
-          '<button class="btn" id="dwToAuthor" style="flex:1">看 @'+esc(d.username)+
-            ' 的全部相关帖 →</button>'+
+          '<button class="btn" id="dwToAuthor" style="flex:1">'+T('dw_see_all',{user:esc(d.username)})+'</button>'+
           starBtn(d.username)+
         '</div>'+
         '<div class="dw-sec" style="display:flex;gap:26px">'+
-          '<div><h4>爆款评分</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1">'+
+          '<div><h4>'+T('dw_score')+'</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1">'+
             d.score.toFixed(2)+'</div></div>'+
-          '<div><h4>上涨速度</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1;color:var(--accent)">'+
-            (d.velocity||0).toFixed(2)+'</div><div class="hint">互动 / 小时</div></div>'+
+          '<div><h4>'+T('dw_velocity')+'</h4><div style="font-family:var(--serif);font-size:36px;font-weight:500;line-height:1;color:var(--accent)">'+
+            (d.velocity||0).toFixed(2)+'</div><div class="hint">'+T('dw_per_hour')+'</div></div>'+
         '</div>'+ spark +
         thumbImg(d,'dw-img')+
-        '<div class="dw-sec"><h4>正文</h4><div class="dw-text">'+esc(d.text||'（无正文）')+'</div></div>'+
-        '<div class="dw-sec"><h4>属性</h4><div class="dw-kv">'+tagOf(d.category)+
+        '<div class="dw-sec"><h4>'+T('dw_section_text')+'</h4><div class="dw-text">'+esc(d.text||T('no_text'))+'</div></div>'+
+        '<div class="dw-sec"><h4>'+T('dw_section_attrs')+'</h4><div class="dw-kv">'+tagOf(d.category)+
           '<span class="tag" style="color:var(--muted)">'+mediaLabel(d.media_type)+'</span>'+
           '<span class="tag" style="color:var(--muted)">'+ago(d.taken_at)+'</span>'+
-          '<span class="tag" style="color:var(--muted)">'+(d.lang||'未知语言')+'</span>'+
+          '<span class="tag" style="color:var(--muted)">'+(d.lang||T('dw_unknown_lang'))+'</span>'+
           '<span class="tag" style="color:'+(d.relevance==='relevant'?'var(--live)':'var(--warn)')+'">'+
-            (d.relevance==='relevant'?'相关':d.relevance==='blocked'?'已屏蔽':'无关')+'</span>'+
-        '</div><div class="hint" style="margin-top:7px">判定依据：'+esc(d.relevance_note||'—')+'</div></div>'+
-        '<div class="dw-sec"><h4>命中关键词</h4><div class="dw-kv">'+
+            (d.relevance==='relevant'?T('rel_relevant'):d.relevance==='blocked'?T('rel_blocked'):T('rel_offtopic'))+'</span>'+
+        '</div><div class="hint" style="margin-top:7px">'+T('dw_relevance_why',{note:esc(d.relevance_note||'—')})+'</div></div>'+
+        '<div class="dw-sec"><h4>'+T('dw_section_kw')+'</h4><div class="dw-kv">'+
           (d.keywords||[]).map(function(k){
             return '<span class="chip on" style="cursor:default">'+esc(k)+'</span>';}).join('')+
         '</div></div>'+
-        '<a class="dw-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">在 Threads 打开原帖 ↗</a>';
+        '<a class="dw-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">'+T('dw_open')+'</a>';
 
       // 帖子 ⇄ 账号 双向跳转：都在同一个抽屉里换内容，不叠加路由，
       // 所以从账号点回帖子不会有历史栈冲突。
@@ -862,7 +900,7 @@ input.f-group{min-width:130px;max-width:130px}
       if(ta) ta.onclick=function(){ openAuthor(d.username); };
       bindStars(document.getElementById('dwBody'));
     }).catch(function(){
-      document.getElementById('dwBody').innerHTML='<div class="hint">详情加载失败</div>';});
+      document.getElementById('dwBody').innerHTML='<div class="hint">'+T('detail_load_failed')+'</div>';});
   }
 
   /* ---------------- 状态与实时 ---------------- */
@@ -873,44 +911,43 @@ input.f-group{min-width:130px;max-width:130px}
   var logBox=document.getElementById('logBox');
   var lastNext=null;
 
-  function setState(s){
+  function renderStatus(s){
     STATUS=s;
     var st=s.stats||{};
-    document.getElementById('sRelevant').innerHTML=n(st.relevant)+'<em>条</em>';
+    document.getElementById('sRelevant').innerHTML=n(st.relevant)+em('unit_posts');
     document.getElementById('sTotalNote').textContent=
-      '库内共 '+n(st.total)+' 条（无关 '+n(st.offtopic)+' / 屏蔽 '+n(st.blocked)+'）';
-    document.getElementById('sAuthors').innerHTML=n(st.authors)+'<em>个</em>';
+      T('stat_total_note',{total:n(st.total),offtopic:n(st.offtopic),blocked:n(st.blocked)});
+    document.getElementById('sAuthors').innerHTML=n(st.authors)+em('unit_accounts');
     document.getElementById('sInter').innerHTML=compact(st.interactions);
-    document.getElementById('sInterNote').textContent='赞 '+compact(st.likes)+
-      ' · 回 '+compact(st.replies)+' · 转 '+compact(st.reposts)+' · 引 '+compact(st.quotes);
-    document.getElementById('sNew').innerHTML=n(st.new)+'<em>条</em>';
+    document.getElementById('sInterNote').textContent=
+      T('m_likes')+' '+compact(st.likes)+' · '+T('m_replies')+' '+compact(st.replies)+
+      ' · '+T('m_reposts')+' '+compact(st.reposts)+' · '+T('m_quotes')+' '+compact(st.quotes);
+    document.getElementById('sNew').innerHTML=n(st.new)+em('unit_posts');
     document.getElementById('sNewNote').textContent = st.top
-      ? ('最高分 @'+st.top.username+' '+Number(st.top.score).toFixed(1)) : '暂无数据';
+      ? T('stat_top',{user:st.top.username,score:Number(st.top.score).toFixed(1)}) : T('stat_empty');
 
-    document.getElementById('kwCnt').textContent=(s.keywords||[]).length+' 个';
+    document.getElementById('kwCnt').textContent=T('kw_count',{n:(s.keywords||[]).length});
 
     // 通道告警：连通性出问题时必须显式说明，不能只靠日志里一行「页面异常」
     var al=document.getElementById('chanAlert'), ch=s.channel||null, fails=s.consecutive_failures||0;
     if(ch && !ch.ok){
       al.classList.add('on');
       document.getElementById('chanTitle').textContent=
-        '抓取通道异常：'+ch.reason+(fails>1?('（连续 '+fails+' 轮 0 条）'):'');
+        T('alert_channel_bad_reason',{reason:ch.reason})+(fails>1?(T('alert_channel_bad_fails',{n:fails})):'');
       document.getElementById('chanDetail').innerHTML=
-        esc(ch.hint||'')+'<br>排查看：<code>/api/probe</code> 自检、代理是否可达 threads.com、'+
-        '是否该降低抓取频率（减少 serp_type 变体数）。';
+        esc(ch.hint||'')+T('alert_channel_hint');
     }else if(s.paused_auto){
       al.classList.add('on');
-      document.getElementById('chanTitle').textContent='已因通道故障自动暂停';
-      document.getElementById('chanDetail').innerHTML=
-        '连续多轮抓不到数据，为免加深封禁已自动停采。排查后点「恢复」继续。';
+      document.getElementById('chanTitle').textContent=T('alert_auto_paused');
+      document.getElementById('chanDetail').innerHTML=T('alert_auto_paused_body');
     }else{
       al.classList.remove('on');
     }
 
-    if(s.paused){dot.className='dot off';stateText.textContent= s.paused_auto?'已熔断暂停':'已暂停';}
-    else if(ch && !ch.ok){dot.className='dot off';stateText.textContent='通道异常';}
-    else if(s.running_cycle){dot.className='dot busy';stateText.textContent='采集中…';}
-    else {dot.className='dot on';stateText.textContent='监控中';}
+    if(s.paused){dot.className='dot off';stateText.textContent= s.paused_auto?T('state_paused_fuse'):T('state_paused');}
+    else if(ch && !ch.ok){dot.className='dot off';stateText.textContent=T('state_channel_bad');}
+    else if(s.running_cycle){dot.className='dot busy';stateText.textContent=T('state_collecting');}
+    else {dot.className='dot on';stateText.textContent=T('state_monitoring');}
 
     if(s.running_cycle && s.progress && s.progress.total){
       prog.classList.add('on');
@@ -927,12 +964,12 @@ input.f-group{min-width:130px;max-width:130px}
       var v=String(s.interval_minutes);
       if(Array.from(sel.options).some(function(o){return o.value===v;})) sel.value=v;
     }
-    document.getElementById('pauseBtn').textContent = s.paused?'恢复':'暂停';
+    document.getElementById('pauseBtn').textContent = s.paused?T('btn_resume'):T('btn_pause');
 
     if(s.logs){ logBox.innerHTML=s.logs.map(function(e){
       return '<div'+(e.level&&e.level!=='info'?' class="'+e.level+'"':'')+'>'+
         '<span class="t">'+esc(e.time)+'</span>'+esc(e.message)+'</div>';}).join('')
-      || '<div><span class="t">--:--:--</span>暂无日志</div>';
+      || '<div><span class="t">--:--:--</span>'+T('log_empty')+'</div>';
       logBox.scrollTop=logBox.scrollHeight; }
   }
 
@@ -953,9 +990,9 @@ input.f-group{min-width:130px;max-width:130px}
                                       if(TAB==='watch') fetchWatch(); }
       else if(d.type==='cycle_start'){ fetchPosts(); }
     });
-    es.onopen=function(){ stateText.textContent='监控中'; };
+    es.onopen=function(){ stateText.textContent=T('state_monitoring'); };
     es.onerror=function(){
-      dot.className='dot off'; stateText.textContent='连接断开，重试中…';
+      dot.className='dot off'; stateText.textContent=T('state_disconnected');
       es.close(); setTimeout(connect,3000);
     };
   }
@@ -1010,18 +1047,16 @@ input.f-group{min-width:130px;max-width:130px}
     if(!COV) return;
     var t=COV.by_tier||{}, r=Math.round((COV.multi_post_ratio||0)*100);
     document.getElementById('cvMain').innerHTML=
-      '库内共 <b>'+n(COV.authors_total)+'</b> 个账号，其中只有 <b>'+n(COV.authors_multi_post)+
-      '</b> 个（'+r+'%）发过 ≥2 条相关帖，其余都是一次性出现的账号。'+
-      '<br><span style="color:var(--faint);font-size:12px">同行榜靠多轮采集累积：'+
-      '采集轮次越多，「持续产出」的账号才会浮出来。爆款阈值 = 单条互动 ≥ '+n(COV.hit_threshold)+'。</span>';
-    var items=[['core','核心监控'],['steady','持续产出'],['single_hit','单帖爆款'],['casual','偶发出现']];
+      T('cov_main',{total:n(COV.authors_total),multi:n(COV.authors_multi_post),pct:r,th:n(COV.hit_threshold)});
+    var items=[['core',T('tier_core')],['steady',T('tier_steady')],
+               ['single_hit',T('tier_single')],['casual',T('tier_casual')]];
     document.getElementById('cvStats').innerHTML=items.map(function(x){
       return '<div class="cv-s"><b>'+n(t[x[0]]||0)+'</b><span>'+x[1]+'</span></div>';}).join('');
   }
 
   function renderTierChips(){
-    var items=[['','全部'],['core','核心监控'],['steady','持续产出'],
-               ['single_hit','单帖爆款'],['casual','偶发出现']];
+    var items=[['',T('tier_all')],['core',T('tier_core')],['steady',T('tier_steady')],
+               ['single_hit',T('tier_single')],['casual',T('tier_casual')]];
     var h=document.getElementById('tierChips');
     h.innerHTML=items.map(function(x){
       return '<button class="chip'+((selTier||'')===x[0]?' on':'')+'" data-v="'+x[0]+'">'+
@@ -1030,7 +1065,16 @@ input.f-group{min-width:130px;max-width:130px}
       b.onclick=function(){ selTier=b.dataset.v||null; aSort=''; fetchAuthors(); };});
   }
 
-  function tierTag(t,label){return '<span class="tier '+esc(t)+'">'+esc(label)+'</span>';}
+  /* 层级标签（核心监控 / 持续产出 / 单帖爆款 / 偶发出现）是后端算出来的枚举，
+     属于界面概念而不是用户数据 —— 有别于分组名，这一类要翻译。
+     后端会给一个中文 label，但那是给中文界面用的；优先按 tier 码反查字典，
+     拿不到码时才退回用 label 原样显示。 */
+  var TIERK = {core:'tier_core',steady:'tier_steady',single_hit:'tier_single',casual:'tier_casual'};
+  /* 优先用 tier 码查字典 —— tier 码是稳定的英文标识，跟界面语言无关。
+     只有拿不到码时才退回后端的 label（中文），保证「看不懂也不至于空白」。 */
+  function tierTag(t,label){
+    var txt = (t && TIERK[t]) ? T(TIERK[t]) : (label ? I18N.unesc(String(label)) : '');
+    return '<span class="tier '+esc(t)+'">'+esc(txt)+'</span>';}
   // 爆款阈值：/api/authors 会带回来，取不到时跟后端 store.HIT_THRESHOLD 保持同一个默认值
   var HIT_TH=500;
   // 没拿到同行榜聚合行时（从雷达页/关注名单进来），拿帖子现算一份，
@@ -1064,7 +1108,7 @@ input.f-group{min-width:130px;max-width:130px}
   function starBtn(u,big){
     var on=WATCHED.has(u);
     return '<button class="star'+(on?' on':'')+'" data-w="'+esc(u)+'" '+
-      'title="'+(on?'取消关注':'加入关注名单')+'">'+(on?'★':'☆')+'</button>';
+      'title="'+(on?T('w_unfollow'):T('w_star_off'))+'">'+(on?'★':'☆')+'</button>';
   }
   // 星标点击不能冒泡到行/卡片，否则会连带打开账号抽屉
   function bindStars(host){
@@ -1085,10 +1129,9 @@ input.f-group{min-width:130px;max-width:130px}
   function renderPeers(){
     var list=A.filter(function(a){return !aq || authorBlob(a).indexOf(aq)>=0;});
     document.getElementById('aCount').textContent=list.length.toLocaleString('en-US');
-    document.getElementById('aNote').textContent='个账号 / 载入 '+A.length+' 个';
+    document.getElementById('aNote').innerHTML=T('meta_authors',{n:n(A.length)});
     if(!list.length){
-      aStage.innerHTML='<div class="empty">没有符合条件的账号。<br>'+
-        '数据少时先取消「只看持续产出」，或点上方「立即采集」多跑几轮。</div>';
+      aStage.innerHTML='<div class="empty">'+T('empty_authors')+'</div>';
       return;}
     var mx=Math.max.apply(null,list.map(function(a){return a.hits||0;}))||1;
 
@@ -1100,24 +1143,24 @@ input.f-group{min-width:130px;max-width:130px}
             starBtn(a.username,true)+
             tierTag(a.tier,a.tier_label)+'</div>'+
           '<div class="acard-m">'+
-            '<span>帖<b>'+n(a.posts)+'</b></span>'+
-            '<span>爆款<b>'+n(a.hits)+'</b></span>'+
-            '<span>互动<b>'+compact(a.interactions)+'</b></span>'+
-            '<span>均<b>'+n(Math.round(a.avg_interactions))+'</b></span>'+
+            '<span>'+T('th_posts')+'<b>'+n(a.posts)+'</b></span>'+
+            '<span>'+T('th_hits')+'<b>'+n(a.hits)+'</b></span>'+
+            '<span>'+T('th_inter')+'<b>'+compact(a.interactions)+'</b></span>'+
+            '<span>'+T('th_avg_inter')+'<b>'+n(Math.round(a.avg_interactions))+'</b></span>'+
           '</div>'+
           '<div class="meter"><i style="width:'+Math.max(3,(a.hits||0)/mx*100)+'%"></i></div>'+
           '<div class="dirs">'+dirsOf(a)+'</div>'+
         '</article>';}).join('')+'</div>';
     }else{
       aStage.innerHTML='<div class="tw scrollx"><table><thead><tr>'+
-        '<th style="width:36px">#</th><th style="width:30px"></th><th style="width:182px">账号</th>'+
-        '<th style="width:88px">分层</th>'+
-        '<th style="width:56px" class="num">帖</th><th style="width:58px" class="num">爆款</th>'+
-        '<th style="width:66px" class="num c-hitrate">爆款率</th>'+
-        '<th style="width:78px" class="num">总互动</th>'+
-        '<th style="width:72px" class="num c-avg">均互动</th>'+
-        '<th style="width:70px" class="num nw c-best">最高分</th>'+
-        '<th class="nw">主攻方向</th><th style="width:86px" class="nw">最近活跃</th></tr></thead><tbody>'+
+        '<th style="width:36px">#</th><th style="width:30px"></th><th style="width:182px">'+T('th_account')+'</th>'+
+        '<th style="width:88px">'+T('th_tier')+'</th>'+
+        '<th style="width:56px" class="num">'+T('th_posts')+'</th><th style="width:58px" class="num">'+T('th_hits')+'</th>'+
+        '<th style="width:66px" class="num c-hitrate">'+T('th_hit_rate')+'</th>'+
+        '<th style="width:78px" class="num">'+T('th_inter')+'</th>'+
+        '<th style="width:72px" class="num c-avg">'+T('th_avg_inter')+'</th>'+
+        '<th style="width:70px" class="num nw c-best">'+T('th_best')+'</th>'+
+        '<th class="nw">'+T('th_dirs')+'</th><th style="width:86px" class="nw">'+T('th_last')+'</th></tr></thead><tbody>'+
         list.map(function(a,i){
           return '<tr data-u="'+esc(a.username)+'">'+
           '<td class="mono" style="color:var(--faint)">'+(i+1)+'</td>'+
@@ -1142,7 +1185,7 @@ input.f-group{min-width:130px;max-width:130px}
   function openAuthor(u){
     var meta=A.filter(function(x){return x.username===u;})[0]||null;
     document.getElementById('dwTitle').textContent='@'+u;
-    document.getElementById('dwBody').innerHTML='<div class="hint">加载中…</div>';
+    document.getElementById('dwBody').innerHTML='<div class="hint">'+T('loading')+'</div>';
     mask.classList.add('on');drawer.classList.add('on');
 
     fetch('/api/author/'+encodeURIComponent(u)).then(function(r){return r.json();})
@@ -1150,50 +1193,51 @@ input.f-group{min-width:130px;max-width:130px}
       var ps=d.posts||[], html='';
       html+='<div class="dw-sec" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
         '<button class="btn'+(WATCHED.has(u)?'':' solid')+'" id="dwFollow" data-u="'+esc(u)+'">'+
-          (WATCHED.has(u)?'★ 已关注':'☆ 关注该账号')+'</button>'+
+          (WATCHED.has(u)?T('w_star_on'):T('w_star_off'))+'</button>'+
         '<span class="hint" id="dwFollowHint">'+
-          (WATCHED.has(u)?'在「关注名单」页可以集中查看':'加入后可在「关注名单」页集中查看')+
+          (WATCHED.has(u)?T('w_to_watch'):T('w_added_hint'))+
         '</span></div>';
       // 从雷达页或关注名单页进来时，同行榜可能还没加载过（A 为空），
       // 这时用刚拿到的帖子现算一份聚合。否则抽屉里只剩一串帖子，
       // 看起来像功能坏了——同一个入口在不同页点开不该差这么多。
       if(!meta && ps.length) meta=deriveAuthorMeta(u,ps);
       if(meta){
-        var m=[['相关帖',meta.posts],['爆款',meta.hits],
-               ['总互动',meta.interactions],['均互动',Math.round(meta.avg_interactions)]];
+        var m=[[T('th_posts'),meta.posts],[T('th_hits'),meta.hits],
+               [T('th_inter'),meta.interactions],[T('th_avg_inter'),Math.round(meta.avg_interactions)]];
         html+='<div class="dw-sec" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
           (meta.tier? tierTag(meta.tier,meta.tier_label):'')+
-          (meta.verified?'<span class="tag" style="color:var(--accent)">已认证</span>':'')+
-          (meta.last_at?'<span class="tag" style="color:var(--muted)">最近活跃 '+
-            ago(meta.last_at)+'</span>':'')+
-          (meta.posts_per_week!=null?'<span class="tag" style="color:var(--muted)">约 '+
-            meta.posts_per_week+' 帖/周</span>':'')+
+          (meta.verified?'<span class="tag" style="color:var(--accent)">'+T('dw_verified')+'</span>':'')+
+          (meta.last_at?'<span class="tag" style="color:var(--muted)">'+
+            T('dw_last_active',{when:ago(meta.last_at)})+'</span>':'')+
+          (meta.posts_per_week!=null?'<span class="tag" style="color:var(--muted)">'+
+            T('dw_per_week',{n:meta.posts_per_week})+'</span>':'')+
         '</div>'+
         '<div class="dw-metrics">'+m.map(function(x){
           return '<div class="dwm"><b>'+n(x[1])+'</b><span>'+x[0]+'</span></div>';}).join('')+'</div>';
-        html+='<div class="dw-sec"><h4>主攻方向</h4><div class="dw-kv">'+
+        html+='<div class="dw-sec"><h4>'+T('dw_section_dirs')+'</h4><div class="dw-kv">'+
           ((meta.top_categories||[]).map(function(c){
-            return tagOf(c.name)+'<span class="hint" style="align-self:center">'+c.count+' 帖</span>';
+            return tagOf(c.name)+'<span class="hint" style="align-self:center">'+
+              T('dw_posts_count',{n:c.count})+'</span>';
           }).join('') || '<span class="hint">—</span>')+'</div></div>';
-        html+='<div class="dw-sec"><h4>命中关键词</h4><div class="dw-kv">'+
+        html+='<div class="dw-sec"><h4>'+T('dw_section_kw')+'</h4><div class="dw-kv">'+
           ((meta.top_keywords||[]).map(function(c){
             return '<span class="chip on" style="cursor:default">'+esc(c.name)+
               '<span class="n">'+c.count+'</span></span>';}).join('') ||
             '<span class="hint">—</span>')+'</div></div>';
       }
-      html+='<div class="dw-sec"><h4>相关帖子 · '+ps.length+' 条</h4>'+
+      html+='<div class="dw-sec"><h4>'+T('dw_section_posts',{n:ps.length})+'</h4>'+
         (ps.length? ps.map(function(p){
           return '<div class="dw-text" style="margin-bottom:9px;cursor:pointer" data-c="'+esc(p.code)+'">'+
             '<div style="display:flex;gap:10px;align-items:baseline;margin-bottom:7px">'+
               '<span class="score" style="margin-left:0"><i>SCORE</i>'+p.score.toFixed(1)+'</span>'+
               '<span class="hint" style="margin-left:auto">'+ago(p.taken_at)+'</span></div>'+
             '<div style="font-size:13px;line-height:1.6;max-height:6.4em;overflow:hidden">'+
-              esc(String(p.text||'（无正文）').slice(0,420))+'</div>'+
+              esc(String(p.text||T('no_text')).slice(0,420))+'</div>'+
             '<div class="p-metrics" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">'+
-              '<span>赞<b>'+n(p.like_count)+'</b></span><span>回<b>'+n(p.reply_count)+'</b></span>'+
-              '<span>转<b>'+n(p.repost_count)+'</b></span><span>引<b>'+n(p.quote_count)+'</b></span>'+
+              '<span>'+T('m_like')+'<b>'+n(p.like_count)+'</b></span><span>'+T('m_reply')+'<b>'+n(p.reply_count)+'</b></span>'+
+              '<span>'+T('m_repost')+'<b>'+n(p.repost_count)+'</b></span><span>'+T('m_quote')+'<b>'+n(p.quote_count)+'</b></span>'+
             '</div></div>';}).join('')
-          : '<div class="hint">没有相关帖。</div>')+'</div>';
+          : '<div class="hint">'+T('dw_no_posts')+'</div>')+'</div>';
       document.getElementById('dwBody').innerHTML=html;
       document.querySelectorAll('#dwBody [data-c]').forEach(function(el){
         el.onclick=function(){openDetail(el.dataset.c);};});
@@ -1202,15 +1246,15 @@ input.f-group{min-width:130px;max-width:130px}
         var target=fb.dataset.u, was=WATCHED.has(target);
         toggleWatch(target).then(function(){
           var now=WATCHED.has(target);
-          fb.textContent = now?'★ 已关注':'☆ 关注该账号';
+          fb.textContent = now?T('w_star_on'):T('w_star_off');
           fb.className = 'btn'+(now?'':' solid');
           var h=document.getElementById('dwFollowHint');
-          if(h) h.textContent = now?'在「关注名单」页可以集中查看'
-                                  : (was?'已从关注名单移除':'加入后可在「关注名单」页集中查看');
+          if(h) h.textContent = now?T('w_to_watch')
+                                  : (was?T('w_removed'):T('w_added_hint'));
         });
       };
     }).catch(function(){
-      document.getElementById('dwBody').innerHTML='<div class="hint">加载失败</div>';});
+      document.getElementById('dwBody').innerHTML='<div class="hint">'+T('load_failed')+'</div>';});
   }
 
   document.getElementById('aq').oninput=function(e){aq=e.target.value.toLowerCase();renderPeers();};
@@ -1253,7 +1297,7 @@ input.f-group{min-width:130px;max-width:130px}
                     body:JSON.stringify({username:u, note:note||''})};
     return fetch(url,opt).then(function(r){return r.json();})
       .then(function(d){
-        if(d&&d.ok===false){ alert(d.error||'操作失败'); return d; }
+        if(d&&d.ok===false){ alert(d.error||T('op_failed')); return d; }
         if(d&&d.accounts){
           W=d.accounts; WSUM=d.summary||null;
           WATCHED=new Set(W.map(function(a){return a.username;}));
@@ -1268,16 +1312,13 @@ input.f-group{min-width:130px;max-width:130px}
   function renderWatchCoverage(){
     if(!WSUM) return;
     document.getElementById('wMain').innerHTML=
-      '正在盯 <b>'+n(WSUM.accounts)+'</b> 个账号，其中 <b>'+n(WSUM.with_new)+
-      '</b> 个本轮有新帖，共 <b>'+n(WSUM.new_posts)+'</b> 条新帖。'+
-      '<br><span style="color:var(--faint);font-size:12px">'+
-      '还没进过库的账号会先显示 0（关注只是标记，不是采集开关）。'+
-      '点账号名可看 TA 的全部相关帖；星标 ★ 也可以在「同行监控」页直接点。</span>';
-    var items=[['accounts','关注账号'],['with_posts','已有数据'],['with_new','有新帖'],
-               ['new_posts','本轮新帖'],['hits','累计爆款'],['interactions','总互动']];
+      T('w_watching',{accounts:n(WSUM.accounts),withnew:n(WSUM.with_new),newposts:n(WSUM.new_posts)});
+    var items=[['accounts',T('w_stat_accounts')],['with_posts',T('w_stat_with_posts')],
+               ['with_new',T('w_stat_with_new')],['new_posts',T('w_stat_new_posts')],
+               ['hits',T('w_stat_hits')],['interactions',T('w_stat_inter')]];
     document.getElementById('wStats').innerHTML=items.map(function(x){
       return '<div class="cv-s"><b>'+n(WSUM[x[0]]||0)+'</b><span>'+x[1]+'</span></div>';}).join('');
-    document.getElementById('wCnt').textContent=WSUM.accounts+' 个';
+    document.getElementById('wCnt').textContent=T('kw_count',{n:WSUM.accounts});
   }
 
   function watchBlob(a){
@@ -1296,16 +1337,13 @@ input.f-group{min-width:130px;max-width:130px}
       return ((b[wSort]||0)-(a[wSort]||0));});
 
     document.getElementById('wCount').textContent=list.length.toLocaleString('en-US');
-    document.getElementById('wNoteTxt').textContent=
-      '个关注账号 / 名单共 '+W.length+' 个';
+    document.getElementById('wNoteTxt').innerHTML=T('meta_watch',{n:n(W.length)});
 
     if(!W.length){
-      wStage.innerHTML='<div class="empty">关注名单还是空的。<br>'+
-        '在上面的输入框填一个 Threads 账号，或去「同行监控」页点账号左边的 ☆。</div>';
+      wStage.innerHTML='<div class="empty">'+T('empty_watch')+'</div>';
       return;}
     if(!list.length){
-      wStage.innerHTML='<div class="empty">没有符合条件的关注账号。<br>'+
-        '取消「只看有新帖」，或清空搜索词试试。</div>';
+      wStage.innerHTML='<div class="empty">'+T('empty_watch_filtered')+'</div>';
       return;}
 
     if(wView==='card'){
@@ -1317,26 +1355,26 @@ input.f-group{min-width:130px;max-width:130px}
             '</span>'+ tierTag(a.tier,a.tier_label)+'</div>'+
           (a.note?'<div class="note" title="'+esc(a.note)+'">'+esc(a.note)+'</div>':'')+
           '<div class="acard-m">'+
-            '<span>帖<b>'+n(a.posts)+'</b></span>'+
-            '<span>爆款<b>'+n(a.hits)+'</b></span>'+
-            '<span>互动<b>'+compact(a.interactions)+'</b></span>'+
-            '<span>新增<b class="'+((a.new_count||0)>0?'wnew':'wzero')+'">'+n(a.new_count)+'</b></span>'+
+            '<span>'+T('th_posts')+'<b>'+n(a.posts)+'</b></span>'+
+            '<span>'+T('th_hits')+'<b>'+n(a.hits)+'</b></span>'+
+            '<span>'+T('th_inter')+'<b>'+compact(a.interactions)+'</b></span>'+
+            '<span>'+T('th_new')+'<b class="'+((a.new_count||0)>0?'wnew':'wzero')+'">'+n(a.new_count)+'</b></span>'+
           '</div>'+
           '<div class="dirs">'+dirsOf(a)+'</div>'+
           '<div class="acard-h" style="gap:8px">'+
-            '<span class="hint">'+(a.has_posts?('最近活跃 '+ago(a.last_at)):'还没进过库')+'</span>'+
-            '<button class="btn" style="margin-left:auto" data-rm="'+esc(a.username)+'">取消关注</button>'+
+            '<span class="hint">'+(a.has_posts?T('w_last_active',{when:ago(a.last_at)}):T('w_not_in_db'))+'</span>'+
+            '<button class="btn" style="margin-left:auto" data-rm="'+esc(a.username)+'">'+T('w_unfollow')+'</button>'+
           '</div>'+
         '</article>';}).join('')+'</div>';
     }else{
       wStage.innerHTML='<div class="tw scrollx"><table><thead><tr>'+
-        '<th style="width:36px">#</th><th style="width:182px">账号</th>'+
-        '<th style="width:88px">分层</th>'+
-        '<th style="width:56px" class="num">帖</th><th style="width:58px" class="num">爆款</th>'+
-        '<th style="width:78px" class="num">总互动</th>'+
-        '<th style="width:72px" class="num">新增</th>'+
-        '<th class="nw">备注</th><th class="nw c-wdirs">主攻方向</th>'+
-        '<th style="width:86px" class="nw">最近活跃</th>'+
+        '<th style="width:36px">#</th><th style="width:182px">'+T('th_account')+'</th>'+
+        '<th style="width:88px">'+T('th_tier')+'</th>'+
+        '<th style="width:56px" class="num">'+T('th_posts')+'</th><th style="width:58px" class="num">'+T('th_hits')+'</th>'+
+        '<th style="width:78px" class="num">'+T('th_inter')+'</th>'+
+        '<th style="width:72px" class="num">'+T('th_new')+'</th>'+
+        '<th class="nw">'+T('th_note')+'</th><th class="nw c-wdirs">'+T('th_dirs')+'</th>'+
+        '<th style="width:86px" class="nw">'+T('th_last')+'</th>'+
         '<th style="width:56px"></th></tr></thead><tbody>'+
         list.map(function(a,i){
           var nc=a.new_count||0;
@@ -1352,7 +1390,7 @@ input.f-group{min-width:130px;max-width:130px}
           '<td class="dirs" title="'+esc(a.note||'')+'">'+(a.note?esc(a.note):'<span style="color:var(--faint)">—</span>')+'</td>'+
           '<td class="dirs c-wdirs">'+dirsOf(a)+'</td>'+
           '<td class="when">'+(a.has_posts?ago(a.last_at):'—')+'</td>'+
-          '<td><button class="rmx" data-rm="'+esc(a.username)+'" title="取消关注">×</button></td>'+
+          '<td><button class="rmx" data-rm="'+esc(a.username)+'" title="'+T('w_unfollow')+'">×</button></td>'+
           '</tr>';}).join('')+
         '</tbody></table></div>';
     }
@@ -1361,7 +1399,7 @@ input.f-group{min-width:130px;max-width:130px}
     wStage.querySelectorAll('[data-rm]').forEach(function(b){
       b.onclick=function(e){ e.stopPropagation();
         var u=b.dataset.rm;
-        if(!confirm('把 @'+u+' 从关注名单移除？')) return;
+        if(!confirm(T('w_remove_title',{user:u}))) return;
         toggleWatch(u);};
     });
   }
@@ -1430,10 +1468,11 @@ input.f-group{min-width:130px;max-width:130px}
   }
   function exportPosts(){
     var list=current();
-    if(!list.length){ alert('当前没有可导出的结果'); return; }
-    downloadCsv('threads_爆款帖子_'+stamp()+'.csv',
-      ['排名','帖子ID','账号','分组','爆款评分','上涨速度','点赞','回复','转发','引用',
-       '总互动','发布时间','命中关键词','正文','缩略图','链接'],
+    if(!list.length){ alert(T('csv_nothing')); return; }
+    downloadCsv(T('csv_posts_file')+stamp()+'.csv',
+      [T('csv_rank'),T('csv_post_id'),T('csv_account'),T('csv_group'),T('csv_score'),T('csv_velocity'),
+       T('csv_likes'),T('csv_replies'),T('csv_reposts'),T('csv_quotes'),
+       T('csv_inter'),T('csv_published'),T('csv_kw'),T('csv_text'),T('csv_thumb'),T('csv_url')],
       list.map(function(p,i){
         return [i+1,p.code,'@'+p.username,p.category,(p.score||0).toFixed(2),
           (p.velocity||0).toFixed(2),p.like_count,p.reply_count,p.repost_count,
@@ -1443,11 +1482,12 @@ input.f-group{min-width:130px;max-width:130px}
   }
   function exportAuthors(){
     var list=A.filter(function(a){return !aq || authorBlob(a).indexOf(aq)>=0;});
-    if(!list.length){ alert('当前没有可导出的结果'); return; }
-    downloadCsv('threads_同行账号_'+stamp()+'.csv',
-      ['排名','账号','分层','相关帖数','爆款数','爆款率','点赞','回复','转发','引用',
-       '总互动','单帖均互动','最高评分','最高点赞','本轮新增','最近活跃',
-       '活跃天数','约帖/周','主攻方向','命中关键词'],
+    if(!list.length){ alert(T('csv_nothing')); return; }
+    downloadCsv(T('csv_authors_file')+stamp()+'.csv',
+      [T('csv_rank'),T('csv_account'),T('csv_tier'),T('csv_posts'),T('csv_hits'),T('csv_rate'),
+       T('csv_likes'),T('csv_replies'),T('csv_reposts'),T('csv_quotes'),
+       T('csv_inter'),T('csv_avg_inter'),T('csv_best_score'),T('csv_best_likes'),T('csv_new'),T('csv_last'),
+       T('csv_active_days'),T('csv_per_week'),T('csv_dirs'),T('csv_kw')],
       list.map(function(a,i){
         return [i+1,'@'+a.username,a.tier_label||'',a.posts,a.hits,
           Math.round((a.hit_rate||0)*100)+'%',a.likes,a.replies,a.reposts,a.quotes,
@@ -1463,10 +1503,10 @@ input.f-group{min-width:130px;max-width:130px}
       if(wOnlyNew && !((a.new_count||0)>0)) return false;
       if(wq && watchBlob(a).indexOf(wq)<0) return false;
       return true;});
-    if(!list.length){ alert('当前没有可导出的结果'); return; }
-    downloadCsv('threads_关注名单_'+stamp()+'.csv',
-      ['排名','账号','分层','相关帖数','爆款数','爆款率','总互动','本轮新增',
-       '最近活跃','备注','主攻方向','命中关键词','加入时间'],
+    if(!list.length){ alert(T('csv_nothing')); return; }
+    downloadCsv(T('csv_watch_file')+stamp()+'.csv',
+      [T('csv_rank'),T('csv_account'),T('csv_tier'),T('csv_posts'),T('csv_hits'),T('csv_rate'),
+       T('csv_inter'),T('csv_new'),T('csv_last'),T('csv_note'),T('csv_dirs'),T('csv_kw'),T('csv_added')],
       list.map(function(a,i){
         return [i+1,'@'+a.username,a.tier_label||'',a.posts,a.hits,
           Math.round((a.hit_rate||0)*100)+'%',a.interactions,a.new_count,
@@ -1483,11 +1523,11 @@ input.f-group{min-width:130px;max-width:130px}
   function renderKw(list){
     document.getElementById('kwList').innerHTML=list.map(function(k){
       return '<span class="kw">'+(k.grp?'<span class="g">'+esc(k.grp)+'</span>':'')+
-        esc(k.keyword)+'<button class="x" data-k="'+esc(k.keyword)+'" title="删除">×</button></span>';
-    }).join('') || '<span class="hint">还没有关键词，在下面添加</span>';
+        esc(k.keyword)+'<button class="x" data-k="'+esc(k.keyword)+'" title="'+T('kw_del_title')+'">×</button></span>';
+    }).join('') || '<span class="hint">'+T('kw_empty')+'</span>';
     document.querySelectorAll('#kwList .x').forEach(function(b){
       b.onclick=function(){
-        if(!confirm('删除关键词「'+b.dataset.k+'」？')) return;
+        if(!confirm(T('kw_del_confirm',{kw:b.dataset.k}))) return;
         fetch('/api/keywords?keyword='+encodeURIComponent(b.dataset.k),{method:'DELETE'})
           .then(function(r){return r.json();})
           .then(function(d){ if(d.keywords) renderKw(d.keywords); });
@@ -1502,7 +1542,7 @@ input.f-group{min-width:130px;max-width:130px}
       .then(function(d){
         if(d.ok){ document.getElementById('kwInput').value='';
           document.getElementById('kwGroup').value=''; renderKw(d.keywords); }
-        else alert(d.error||'添加失败');});
+        else alert(d.error||T('kw_add_failed'));});
   };
   document.getElementById('kwInput').addEventListener('keydown',function(e){
     if(e.key==='Enter') document.getElementById('kwAdd').click();});
@@ -1524,24 +1564,50 @@ input.f-group{min-width:130px;max-width:130px}
   probeBtns.forEach(function(b){
     if(!b) return;
     b.onclick=function(){
-      probeBtns.forEach(function(x){if(x){x.disabled=true;x.textContent='自检中…';}});
+      probeBtns.forEach(function(x){if(x){x.disabled=true;x.textContent=T('btn_probe_ing');}});
       fetch('/api/probe',{method:'POST'}).then(function(r){return r.json();})
         .then(function(d){
           probeBtns.forEach(function(x){if(x){x.disabled=false;}});
-          probeBtns[0].textContent='通道自检'; probeBtns[1].textContent='自检';
+          probeBtns[0].textContent=T('btn_probe_channel'); probeBtns[1].textContent=T('btn_probe');
           alert(d.ok
-            ? ('通道正常\n拿到 '+d.bytes+' 字节，解析出 '+d.posts+' 条帖子')
-            : ('通道不通\n原因：'+d.reason+'\n'+(d.hint||'')+'\n\n'+(d.detail||'')));
+            ? T('probe_ok',{bytes:d.bytes,posts:d.posts})
+            : T('probe_fail',{reason:d.reason,hint:d.hint||'',detail:d.detail||''}));
           fetch('/api/status').then(function(r){return r.json();}).then(setState);
         })
         .catch(function(){
           probeBtns.forEach(function(x){if(x){x.disabled=false;}});
-          probeBtns[0].textContent='通道自检'; probeBtns[1].textContent='自检';
+          probeBtns[0].textContent=T('btn_probe_channel'); probeBtns[1].textContent=T('btn_probe');
         });
     };
   });
 
+  /* ---------------- 语言切换 ----------------
+     放在启动流程最前面：先把静态文案刷成目标语言，再拉数据渲染动态部分，
+     否则会先闪一下简体中文再切换。 */
+  var langSel=document.getElementById('langSel');
+  langSel.innerHTML=I18N.options().map(function(o){
+    /* 语言名本身永远用该语言自己的写法，不参与翻译 ——
+       否则切到韩文后菜单里就找不到「简体中文」了。 */
+    return '<option value="'+o.code+'">'+esc(o.name)+'</option>';}).join('');
+  langSel.value=I18N.getLang();
+  langSel.onchange=function(){ I18N.setLang(langSel.value); I18N.emit(); };
+
+  /* 切语言后要重跑的东西：静态文案 + 三份动态视图 + 状态栏。
+     帖子正文、账号名、日志正文、分组名不翻 —— 那些是数据，不是界面。 */
+  I18N.onLangChange(function(){
+    I18N.applyStatic();
+    try{ buildChips(); }catch(e){}
+    try{ render(); }catch(e){}
+    try{ renderTierChips(); }catch(e){}
+    try{ renderPeers(); }catch(e){}
+    try{ renderWatchCoverage(); renderWatch(); }catch(e){}
+    try{ if(STATUS) renderStatus(STATUS); }catch(e){}
+    try{ if(!logLines.length) logBox.innerHTML=
+      '<div><span class="t">--:--:--</span>'+T('log_empty')+'</div>'; }catch(e){}
+  });
+
   /* ---------------- 启动 ---------------- */
+  I18N.applyStatic();
   fetch('/api/keywords').then(function(r){return r.json();})
     .then(function(d){ renderKw(d.keywords||[]); });
   fetchWatch();

@@ -30,6 +30,7 @@ Threads에서 관심 키워드와 관련된 공개 게시물을 모니터링하�
 - **인게이지먼트 성장 곡선**: 수집할 때마다 스냅샷을 기록하므로 게시물의 성장 추이를 상세 드로어에서 볼 수 있습니다
 - **채널 상태 점검 + 서킷 브레이커**: 실패를 실제 원인별로 분류하고, 빈 사이클이 반복되면 차단된 출구를 계속 두드리지 않고 모니터링을 중단합니다
 - **의존성 제로**: `urllib` / `sqlite3` / `http.server` / `threading`만 사용. 장시간 가동 시 환경 변화로 깨지지 않습니다
+- **5개 언어 UI**: 간체 중국어 / English / 번체 중국어 / 日本語 / 한국어. 내비게이션 바 우측 상단에서 한 번에 전환하고 선택은 브라우저에 저장됩니다. 데이터 측 값(그룹 이름, 키워드, 계정 이름, 게시물 본문)은 번역하지 않습니다 — 화면에서 본 단어를 그대로 설정 파일에서 검색할 수 있게 하기 위해서입니다
 - **3단계 반응형**: 데스크톱 / 태블릿 / 모바일. 54가지 너비×뷰 조합에서 가로 스크롤이 없음을 실측했습니다
 
 ---
@@ -156,12 +157,19 @@ start.bat            # 또는 python server.py
 | `check_watch.cjs` | 반응형 스캔: 18개 너비 × 3개 뷰 = 54개 조합에서 가로 오버플로와 JS 오류 확인 | puppeteer-core |
 | `shots3.cjs` | 3개 뷰 자동 스크린샷 (데스크톱 1440 / 태블릿 1024 / 모바일 390) | puppeteer-core |
 | `scan_broken_modules.cjs` | `node_modules`에서 "패키지는 있지만 진입 파일이 사라진" 손상된 패키지 탐지 | **없음** |
+| `verify_i18n_static.cjs` | 다국어 사전 정적 검증: 5개 언어 키 집합 일치, 플레이스홀더 정합, 참조 키 존재, 고아 키/빈 번역 없음 | **없음** |
+| `verify_i18n.cjs` | 다국어 E2E 검증: 실제로 페이지를 열어 5개 언어를 차례로 전환하며 표 헤더/카드/상태 표시줄/빈 상태, 키 이름 누출 없음, 데이터가 번역되지 않음을 확인 (65개 어서션) | jsdom |
+| `i18n_sample.cjs` | 언어별 UI 문구를 추출해 번역 품질을 눈으로 확인 | jsdom |
+| `verify_readmes.cjs` | 5개 README 일관성: 내부 앵커, 제목/표 구조, 언어 전환 상호 링크, 5개 언어 완비 | **없음** |
 
 **도구로만 쓴다면 이 디렉터리는 신경 쓸 필요가 없습니다.** 회귀 테스트를 돌리려면:
 
 ```bash
-npm i -D puppeteer-core
-node tools/check_watch.cjs        # 서버를 먼저 실행해야 함
+npm i -D puppeteer-core jsdom
+node tools/check_watch.cjs          # 서버를 먼저 실행해야 함
+node tools/verify_i18n_static.cjs   # 서버 불필요, 밀리초 단위
+node tools/verify_i18n.cjs          # 서버를 먼저 실행해야 함
+node tools/verify_readmes.cjs       # 서버 불필요
 ```
 
 스크립트는 Chrome을 자동으로 탐지합니다. 찾지 못하면 `CHROME_PATH` / `PUPPETEER_PATH`로 지정하세요.
@@ -491,6 +499,7 @@ Excel을 위한 두 가지 세부 배려가 있고, 하나라도 빠지면 중�
 | `blocklist.txt` | 노이즈 차단어 표 |
 | `watchlist.txt` | **관심 목록** (화면에서 읽고 씁니다. DB가 원본, 파일은 미러) |
 | `web/index.html` | 프런트엔드 (단일 파일) |
+| `web/i18n.js` | 5개 언어 문구 사전과 런타임 (241개 키 × 5개 언어) |
 | `docs/` | README용 스크린샷 |
 | `tools/` | 개발기 회귀 스크립트 (선택, Node 필요. 위 "배포" 절 참조) |
 | `README.md` / `README.en.md` / `README.zh-TW.md` / `README.ja.md` / `README.ko.md` | 5개 언어 문서 (상단에서 전환 가능) |

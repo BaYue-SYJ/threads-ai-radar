@@ -30,6 +30,7 @@
 - **互动增长曲线**：每次采集写一条快照，详情里能看到一条帖子的增长轨迹
 - **通道健康检查 + 熔断**：失败原因分类到具体理由，连续零产出自动停，不硬敲被封的出口
 - **零依赖**：只用 `urllib` / `sqlite3` / `http.server` / `threading`，长期挂机不易因环境问题中断
+- **五语界面**：简体中文 / English / 繁體中文 / 日本語 / 한국어，导航栏右上角一键切换，选择记在浏览器里；数据侧的值（分组名、关键词、账号名、帖子正文）绝不翻译，保证界面上的词能直接拿去配置文件里搜
 - **三档响应式**：桌面 / 平板 / 移动，实测 54 种宽度×视图组合无横向溢出
 
 ---
@@ -156,12 +157,19 @@ start.bat            # 或 python server.py
 | `check_watch.cjs` | 响应式扫描：18 个宽度 × 3 个视图 = 54 种组合，查横向溢出与 JS 报错 | puppeteer-core |
 | `shots3.cjs` | 三视图自动截图（桌面 1440 / 平板 1024 / 手机 390） | puppeteer-core |
 | `scan_broken_modules.cjs` | 扫 `node_modules` 里「包还在但入口文件没了」的残缺包 | **无** |
+| `verify_i18n_static.cjs` | 多语言字典静态校验：五语键集合一致、占位符对齐、引用的键都存在、无孤儿键/空译文 | **无** |
+| `verify_i18n.cjs` | 多语言端到端校验：真开页面逐语切换，查表头/卡片/状态栏/空状态、无键名泄漏、数据不被翻译（65 条断言） | jsdom |
+| `i18n_sample.cjs` | 抽样各语言的界面文案，用来人工过一眼翻译质量 | jsdom |
+| `verify_readmes.cjs` | 五份 README 一致性：内部锚点、章节/表格结构、语言切换互链、五语齐全 | **无** |
 
 **只用工具的话完全不用管这个目录。** 想跑回归：
 
 ```bash
-npm i -D puppeteer-core
-node tools/check_watch.cjs        # 服务需先启动
+npm i -D puppeteer-core jsdom
+node tools/check_watch.cjs          # 服务需先启动
+node tools/verify_i18n_static.cjs   # 不需要起服务，毫秒级
+node tools/verify_i18n.cjs          # 服务需先启动
+node tools/verify_readmes.cjs       # 不需要起服务
 ```
 
 脚本会自动探测 Chrome；探不到就用 `CHROME_PATH` / `PUPPETEER_PATH` 指定。
@@ -491,6 +499,7 @@ urllib.error.URLError: Tunnel connection failed: 502 Bad Gateway
 | `blocklist.txt` | 噪音屏蔽词表 |
 | `watchlist.txt` | **关注名单**（界面会读写它，库为主、文件为镜像） |
 | `web/index.html` | 前端界面（单文件） |
+| `web/i18n.js` | 五语文案字典与运行时（241 键 × 5 语言） |
 | `docs/` | README 用的界面截图 |
 | `tools/` | 开发期回归脚本（可选，需 Node，详见上文「部署」节） |
 | `README.md` / `README.en.md` / `README.zh-TW.md` / `README.ja.md` / `README.ko.md` | 五语版说明（顶部可切换） |

@@ -23,6 +23,11 @@ venv/
 # 开发期截图（含真实抓取数据，勿公开）
 _shots/
 
+# 改动前的本地备份（自己留的后悔药，不是项目内容）
+*.bak
+*.bak-*
+*_before_*
+
 # Node —— tools/ 下的回归脚本需要，但非运行本项目所必需
 node_modules/
 package-lock.json

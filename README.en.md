@@ -30,6 +30,7 @@ Every view can export whatever you're currently looking at as CSV (opens cleanly
 - **Engagement growth curves**: every cycle writes a snapshot, so a post's growth is visible in its detail drawer
 - **Channel health checks + circuit breaker**: failures are classified by actual cause, and repeated empty cycles stop the monitor instead of hammering a blocked exit
 - **Zero dependencies**: only `urllib` / `sqlite3` / `http.server` / `threading`, so long-running sessions don't break on environment drift
+- **Five UI languages**: Simplified Chinese / English / Traditional Chinese / Japanese / Korean, switchable from the top-right of the nav bar and remembered in the browser. Data-side values (group names, keywords, author handles, post text) are never translated, so the words you see on screen are the words you can search for in your config files
 - **Responsive in three tiers**: desktop / tablet / mobile — measured across 54 width×view combinations with no horizontal overflow
 
 ---
@@ -156,12 +157,19 @@ Three things to know:
 | `check_watch.cjs` | Responsive sweep: 18 widths × 3 views = 54 combinations, checking horizontal overflow and JS errors | puppeteer-core |
 | `shots3.cjs` | Automated screenshots of the three views (desktop 1440 / tablet 1024 / mobile 390) | puppeteer-core |
 | `scan_broken_modules.cjs` | Scans `node_modules` for packages whose entry file is missing | **none** |
+| `verify_i18n_static.cjs` | Static i18n dictionary check: identical key sets across all five languages, matching placeholders, every referenced key present, no orphans or empty translations | **none** |
+| `verify_i18n.cjs` | End-to-end i18n check: really loads the page and switches through all five languages, verifying headers/cards/status bar/empty states, no key leakage, and that data is never translated (65 assertions) | jsdom |
+| `i18n_sample.cjs` | Dumps UI strings per language for a quick eyeball pass on translation quality | jsdom |
+| `verify_readmes.cjs` | Consistency across the five READMEs: internal anchors, heading/table structure, language-switcher cross-links, all five languages present | **none** |
 
 **If you only want to use the tool, you can ignore this directory entirely.** To run the regressions:
 
 ```bash
-npm i -D puppeteer-core
-node tools/check_watch.cjs        # the server must be running
+npm i -D puppeteer-core jsdom
+node tools/check_watch.cjs          # the server must be running
+node tools/verify_i18n_static.cjs   # no server needed, takes milliseconds
+node tools/verify_i18n.cjs          # the server must be running
+node tools/verify_readmes.cjs       # no server needed
 ```
 
 The scripts auto-detect Chrome; if that fails, point them at it with `CHROME_PATH` / `PUPPETEER_PATH`.
@@ -518,6 +526,7 @@ exports and scripted use — not limited to the 3,000 rows the browser keeps in 
 | `blocklist.txt` | Noise/blocklist terms |
 | `watchlist.txt` | **Watchlist** (the UI reads and writes it; database is source of truth, file is a mirror) |
 | `web/index.html` | Frontend (single file) |
+| `web/i18n.js` | Five-language string dictionary and runtime (241 keys × 5 languages) |
 | `docs/` | Screenshots used by the README |
 | `tools/` | Development regression scripts (optional, needs Node — see the deploy section) |
 | `README.md` / `README.en.md` / `README.zh-TW.md` / `README.ja.md` / `README.ko.md` | Documentation in five languages (switchable from the top) |
