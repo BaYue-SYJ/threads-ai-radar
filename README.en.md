@@ -762,7 +762,9 @@ If the radar gives you trouble, or you want to talk prompts and content creation
 > much faster.
 
 ---
+### 社区
 
+| [**Linux.Do**](https://linux.do) | Linux.Do /— 与社区分享、讨论和跟踪发展. |
 ## License
 
 [MIT License](LICENSE) © 2026 BaYue-SYJ
