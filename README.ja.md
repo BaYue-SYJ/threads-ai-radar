@@ -71,7 +71,7 @@ Threads の AI 関連コンテンツは伸びが速く、**ほぼ確実に見逃
 
 ### 1. threads.com に到達できるか確認
 
-ブラウザで <https://www.threads.com/search?q=ChatGPT> を開き、内容が見えれば問題ありません。
+ブラウザで <https://www.threads.com> を開き、正常に表示されれば問題ありません。
 
 **開けない場合**（多くの地域で直結は遮断されています）、まずプロキシが必要です。本プロジェクトは Python 標準ライブラリの `urllib` で取得するため、システムの `http_proxy` / `https_proxy` 環境変数を自動的に読み取ります：
 
@@ -355,6 +355,17 @@ threads-ai-radar/
 ```
 
 **UI は 5 言語対応**：简体中文、English、繁體中文、日本語、한국어。右上で切り替え、選択は localStorage に保存されます。UI の文言はすべて翻訳しますが、**投稿本文・アカウント名・グループ名は翻訳しません** —— それらはデータであり、インターフェースではないからです。
+
+---
+
+## 関連プロジェクト
+
+| プロジェクト | 説明 |
+|---|---|
+| [**shuixian-manju-skills**](https://github.com/BaYue-SYJ/shuixian-manju-skills) | 水仙のショートドラマ 6 点セット：小説から完成した短編動画までの創作スキル集（shuohao-skills に着想） |
+| [**shuixian-prompts**](https://github.com/BaYue-SYJ/shuixian-prompts) | 水仙の AI プロンプトギャラリーのソース（無償のプロンプトサイト） |
+| [**zimeiti-workbuddy**](https://github.com/BaYue-SYJ/zimeiti-workbuddy) | Creator Buddy：WeChat / 小紅書 / ショート動画の全工程創作 Skill ツールボックス |
+| [**web-html-image-skill**](https://github.com/BaYue-SYJ/web-html-image-skill) | web-image：HTML/CSS で画像を描画。画像生成モデル不要、32 種のプリセットスタイル |
 
 ---
 

@@ -71,7 +71,7 @@ Threads의 AI 콘텐츠는 엄청 빠르게 오르는데, **거의 절대 제때
 
 ### 1. threads.com 접속 가능 여부 확인
 
-브라우저에서 <https://www.threads.com/search?q=ChatGPT> 를 열어 내용이 보이면 됩니다.
+브라우저에서 <https://www.threads.com> 를 열어 정상적으로 보이면 됩니다.
 
 **안 열리면**(많은 지역에서 직결이 막혀 있습니다) 프록시가 필요합니다. 이 프로젝트는 Python 표준 라이브러리 `urllib`로 수집하며, 시스템의 `http_proxy` / `https_proxy` 환경 변수를 자동으로 읽습니다:
 
@@ -355,6 +355,17 @@ threads-ai-radar/
 ```
 
 **UI는 5개 언어를 지원합니다**: 简体中文, English, 繁體中文, 日本語, 한국어. 오른쪽 위에서 전환하고 선택은 localStorage에 저장됩니다. UI 문구는 전부 번역하지만 **게시물 본문, 계정 이름, 그룹 이름은 번역하지 않습니다** —— 그건 데이터이지 인터페이스가 아닙니다.
+
+---
+
+## 관련 프로젝트
+
+| 프로젝트 | 설명 |
+|---|---|
+| [**shuixian-manju-skills**](https://github.com/BaYue-SYJ/shuixian-manju-skills) | 수선의 단편 드라마 6종 세트: 소설에서 완성된 단편 영상까지의 창작 스킬 모음 (shuohao-skills에서 착안) |
+| [**shuixian-prompts**](https://github.com/BaYue-SYJ/shuixian-prompts) | 수선의 AI 프롬프트 갤러리 소스 (무료 프롬프트 사이트) |
+| [**zimeiti-workbuddy**](https://github.com/BaYue-SYJ/zimeiti-workbuddy) | Creator Buddy: 위챗 / 샤오홍슈 / 숏폼 영상 전 과정 창작 Skill 도구함 |
+| [**web-html-image-skill**](https://github.com/BaYue-SYJ/web-html-image-skill) | web-image: HTML/CSS로 이미지 렌더링. 이미지 생성 모델 불필요, 32가지 프리셋 스타일 |
 
 ---
 

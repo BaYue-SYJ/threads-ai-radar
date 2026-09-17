@@ -71,7 +71,7 @@ It is not a scraping framework. It is a single process you can leave running.
 
 ### 1. Make sure threads.com is reachable
 
-Open <https://www.threads.com/search?q=ChatGPT> in a browser. If you see content, you're fine.
+Open <https://www.threads.com> in a browser. If it loads, you're fine.
 
 **If it doesn't load** (direct connections are blocked in many regions), you need a proxy first. This project scrapes with Python's standard-library `urllib`, which automatically picks up the system `http_proxy` / `https_proxy` environment variables:
 
@@ -355,6 +355,17 @@ threads-ai-radar/
 ```
 
 **The UI supports five languages**: 简体中文, English, 繁體中文, 日本語, 한국어. Switch in the top-right corner; the choice is stored in localStorage. All UI chrome is translated, but **post bodies, account names and group names are not** — those are data, not interface.
+
+---
+
+## Related projects
+
+| Project | Description |
+|---|---|
+| [**shuixian-manju-skills**](https://github.com/BaYue-SYJ/shuixian-manju-skills) | A six-piece short-drama toolkit: from novel to finished episode (inspired by shuohao-skills) |
+| [**shuixian-prompts**](https://github.com/BaYue-SYJ/shuixian-prompts) | Source of the Daffodil AI prompt gallery (a free prompt site) |
+| [**zimeiti-workbuddy**](https://github.com/BaYue-SYJ/zimeiti-workbuddy) | Creator Buddy: a full-workflow Skill toolbox for WeChat, Xiaohongshu and short video |
+| [**web-html-image-skill**](https://github.com/BaYue-SYJ/web-html-image-skill) | web-image: render images with HTML/CSS, no image model required, 32 preset styles |
 
 ---
 

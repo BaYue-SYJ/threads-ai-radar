@@ -71,7 +71,7 @@ Threads 上 AI 相关的内容涨得很快，但**你几乎不可能及时看到
 
 ### 1. 确认能访问 threads.com
 
-浏览器打开 <https://www.threads.com/search?q=ChatGPT>，能看到内容就行。
+浏览器打开 <https://www.threads.com>，能正常访问就行。
 
 **如果打不开**（很多地区直连不通），需要先配一个代理。本项目用 Python 标准库 `urllib` 抓取，它会自动读取系统的 `http_proxy` / `https_proxy` 环境变量：
 
@@ -355,6 +355,17 @@ threads-ai-radar/
 ```
 
 **界面支持五种语言**：简体中文、English、繁體中文、日本語、한국어。右上角切换，选择记在 localStorage。界面文案全部翻译，但**帖子正文、账号名、分组名不翻译** —— 那些是数据，不是界面。
+
+---
+
+## 相关项目
+
+| 项目 | 说明 |
+|---|---|
+| [**shuixian-manju-skills**](https://github.com/BaYue-SYJ/shuixian-manju-skills) | 水仙的漫剧 6 件套：从小说到短剧成片的创作技能集（灵感来源于 shuohao-skills） |
+| [**shuixian-prompts**](https://github.com/BaYue-SYJ/shuixian-prompts) | 水仙的 AI 提示词画廊源码（公益提示词网站） |
+| [**zimeiti-workbuddy**](https://github.com/BaYue-SYJ/zimeiti-workbuddy) | Creator Buddy：公众号 / 小红书 / 短视频的全流程创作 Skill 工具箱 |
+| [**web-html-image-skill**](https://github.com/BaYue-SYJ/web-html-image-skill) | web-image：用 HTML/CSS 渲染出图，不依赖生图模型，32 套预设风格 |
 
 ---
 
