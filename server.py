@@ -102,10 +102,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):                                    # noqa: N802
         self._send(204, b"")
 
+    def _authorized(self, qs: dict) -> bool:
+        """校验 /api/* 请求携带的令牌，防止匿名跨域访问敏感数据。"""
+        auth = self.headers.get("Authorization", "")
+        token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+        token = token or (qs.get("token") or [""])[0]
+        return token == config.API_TOKEN
+
     def do_GET(self):                                        # noqa: N802
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         qs = urllib.parse.parse_qs(parsed.query)
+
+        if path.startswith("/api/") and not self._authorized(qs):
+            return self.json_out({"error": "unauthorized"}, 401)
 
         if path == "/api/status":
             return self.json_out(monitor.status())
@@ -243,6 +253,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):                                       # noqa: N802
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        qs = urllib.parse.parse_qs(parsed.query)
+
+        if path.startswith("/api/") and not self._authorized(qs):
+            return self.json_out({"error": "unauthorized"}, 401)
 
         if path == "/api/collect":
             ok = monitor.trigger()
@@ -305,6 +319,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_DELETE(self):                                     # noqa: N802
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
+
+        if parsed.path.startswith("/api/") and not self._authorized(qs):
+            return self.json_out({"error": "unauthorized"}, 401)
 
         if parsed.path == "/api/watchlist":
             user = store.normalize_username((qs.get("username") or [""])[0])
@@ -451,6 +468,7 @@ def main() -> None:
     print("  Threads 爆款雷达 · 实时关键词监控")
     print("=" * 62)
     print(f"  界面      {url}")
+    print(f"  API 密钥  {config.API_TOKEN}")
     print(f"  关键词    {len(store.list_keywords())} 个")
     print(f"  关注名单  {len(store.watchlist_all())} 个账号")
     print(f"  采集间隔  {monitor.interval / 60:g} 分钟")

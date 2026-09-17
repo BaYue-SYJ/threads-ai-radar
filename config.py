@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -68,6 +69,11 @@ _load_env()
 # ---- 服务 ----
 HOST = os.getenv("RADAR_HOST", "127.0.0.1")
 PORT = int(os.getenv("RADAR_PORT", "8650"))
+# API 鉴权令牌：所有 /api/* 请求必须携带，防止匿名跨域访问敏感数据。
+# 首次启动自动生成并写回 .env，重启后沿用同一个令牌。
+API_TOKEN = os.getenv("RADAR_API_TOKEN") or secrets.token_hex(24)
+if not os.getenv("RADAR_API_TOKEN"):
+    save_env("RADAR_API_TOKEN", API_TOKEN)
 
 # ---- 采集 ----
 # Googlebot UA 是触发 Threads 服务端渲染的关键；换普通 UA 会拿到空壳页面。
