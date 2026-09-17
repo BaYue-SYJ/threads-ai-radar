@@ -119,8 +119,12 @@ CYCLE_MAX_SECONDS = int(os.getenv("RADAR_CYCLE_MAX_SECONDS", "1800"))
 
 # ---- 评分与展示 ----
 TOP_N = int(os.getenv("RADAR_TOP_N", "300"))
-# 低于此互动量的帖子视为长尾，前端默认过滤掉（可在界面调整）
-MIN_INTERACTIONS_DEFAULT = int(os.getenv("RADAR_MIN_INTERACTIONS", "10"))
+# 界面「最低互动」滑块的初始阈值（用户可在界面上随时调，调完以界面为准）。
+# 口径是「点赞 / 回复 / 转发 三项中的最大值」，不是三项相加 ——
+# 相加会把「100 赞 + 0 回 + 0 转」和「34 赞 + 33 回 + 33 转」判成同一档，
+# 而前者才是真爆款。
+# 默认 30：低于这个量级基本是刚发布或纯长尾，不值得占用注意力。
+MIN_INTERACTIONS_DEFAULT = int(os.getenv("RADAR_MIN_INTERACTIONS", "30"))
 
 # ---- 数据保留 ----
 # 快照最多保留天数，避免库无限膨胀

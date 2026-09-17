@@ -40,6 +40,30 @@ def _search_plan(pairs: list[tuple[str, str]]) -> tuple[list[str], dict[str, str
     return terms, raw_by_term
 
 
+def _interactions(post: dict) -> int:
+    """一条帖子的互动总量（四项之和）。"""
+    return ((post.get("like_count") or 0) + (post.get("reply_count") or 0)
+            + (post.get("repost_count") or 0) + (post.get("quote_count") or 0))
+
+
+def _drop_noise(posts: list[dict]) -> tuple[list[dict], int]:
+    """剔除「零互动」的帖子，不让它们入库。返回 (保留的, 丢弃数)。
+
+    为什么：Threads 搜索为了凑齐一页，会返回大量**刚发布、还没有任何反应**
+    的帖子。实测某轮 860 条新入库帖里，判为相关的只有 13 条（1.5%），
+    其余几乎全是零赞、与关键词无关的噪音 —— 它们既没有选题价值，
+    又把库和榜单一起灌满。
+
+    关键：这不是「永久丢弃」，而是**延迟入库**。
+    帖子下次被采到时如果已经有互动，就会被正常收进库 ——
+    代价只是失去「零互动那一段」的涨幅轨迹，而不是永远看不到这条帖子。
+    因此这条规则比「互动低于某个阈值就不收」温和得多：后者会把
+    已经起步、正在上涨的帖子也一并挡掉。
+    """
+    keep = [p for p in posts if _interactions(p) > 0]
+    return keep, len(posts) - len(keep)
+
+
 def run_cycle(on_progress=None, on_log=None) -> dict:
     """执行一轮采集。返回结果摘要。"""
     pairs, blocklist = load_config()
@@ -106,6 +130,13 @@ def run_cycle(on_progress=None, on_log=None) -> dict:
         # 整轮颗粒无收 = 通道级故障，而不是个别关键词没数据
         summary["all_failed"] = bool(healths) and len(posts) == 0
 
+        # 最后一道闸：零互动帖不入库（见 _drop_noise 的说明）。
+        # 放在相关性判定**之前** —— 让 counts 和后面所有统计只反映
+        # 真正入库的那批，免得「相关 189 条」里混着一堆压根没存进去的帖子。
+        posts, dropped = _drop_noise(posts)
+        summary["dropped"] = dropped
+        summary["kept"] = len(posts)
+
         counts = relevance.apply(posts, blocklist)
         summary.update(counts)
 
@@ -122,11 +153,15 @@ def run_cycle(on_progress=None, on_log=None) -> dict:
         # 完成度按实际跑完的关键词数记，超时中止时不能谎报成「全部跑完」
         done = len(healths)
         head = "完成" if done >= len(search_terms) else f"完成（{done}/{len(search_terms)}）"
-        msg = (f"{head}：抓到 {len(posts)} 条，新增 {new} 条，"
+        msg = (f"{head}：抓到 {summary['found']} 条（丢弃零互动 {dropped} 条），"
+               f"新增 {new} 条，"
                f"相关 {counts['relevant']} / 无关 {counts['offtopic']} / 屏蔽 {counts['blocked']}")
         if summary["timed_out"]:
             msg += " · 已达时间上限提前中止"
-        store.update_run(run_id, keywords_done=done, found=len(posts),
+        # found 记**过滤前**的原始抓取量（= summary["found"]），
+        # 而不是 len(posts) —— 后者已经被 _drop_noise 削过，
+        # 会让 runs 表的数字和界面摘要对不上。
+        store.update_run(run_id, keywords_done=done, found=summary["found"],
                          new_posts=new, relevant=counts["relevant"], message=msg)
         store.finish_run(run_id, "done", msg)
         store.prune_snapshots()

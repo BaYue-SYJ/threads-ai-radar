@@ -1,41 +1,21 @@
-# ============================================================
-#  监控关键词表
-# ------------------------------------------------------------
-#  用法：
-#    · 每行一个关键词，直接在这里增删（界面里也能改）
-#    · [方括号] 开头的行表示分组，会直接用作界面上的分类
-#    · # 开头的行是注释
-#    · 空格 = AND： 「AI prompt」表示正文需同时出现 AI 和 prompt
-#    · 竖线 = OR（同义词）： 「ChatGPT | GPT | #chatgpt」表示命中任意一个即可
-#        竖线左边的第一个写法用于发起搜索，右边的只用于判定相关性。
-#        很多帖只说 GPT 而不写全称，加同义词才不会漏。
-# ============================================================
+# 由界面自动维护，也可手工编辑（界面会重新读取本文件）
+# [方括号] 为分组，每行一个关键词，# 开头是注释
+
+image2 | image2.5 | image
+咒語
+指令
+提示詞
+
+[提示词]
+AI prompt | AI prompts | AI提示词
+image prompt | image prompts | 图片提示词
 
 [模型]
 ChatGPT | GPT | chatgpt
 Claude | ClaudeAI | Anthropic Claude
-Gemini | Google Gemini | Gemini AI
 GPT-5 | GPT5 | gpt 5
 
 [生图]
-Nano Banana | nanobanana | Nano Banana Pro
 GPT image | gptimage | GPT Image 2
-Midjourney | midjourney
-AI image | AI 图片 | AI绘图
 AI art | AI 绘画 | AI画
-
-[提示词]
-AI prompt | AI prompts | AI提示词
-prompt engineering | prompt写作
-image prompt | image prompts | 图片提示词
-
-[视频]
-AI video | AI video generation | AI视频
-Veo | Veo 3 | Google Veo
-Sora | OpenAI Sora | Sora 2
-
-[Agent 与工具]
-AI agent | AI agents | AI智能体
-vibe coding | vibecoding
-AI tools | AI tool | AI工具
-AI workflow | AI workflows | AI工作流
+Midjourney | midjourney

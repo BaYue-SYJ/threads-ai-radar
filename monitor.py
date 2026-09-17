@@ -20,7 +20,8 @@ import time
 from collections import deque
 from datetime import datetime, timedelta
 
-from config import COLLECT_ON_START, FAILURE_LIMIT, INTERVAL_MINUTES
+from config import (COLLECT_ON_START, FAILURE_LIMIT, INTERVAL_MINUTES,
+                    MIN_INTERACTIONS_DEFAULT)
 import pipeline
 import store
 
@@ -93,6 +94,9 @@ class Monitor:
                 "seconds_to_next": (max(0, int(self.next_run_at - time.time()))
                                     if self.next_run_at else None),
                 "interval_minutes": round(self.interval / 60, 2),
+                # 界面「最低互动」滑块的初始值。放在这里而不是写死在前端，
+                # 是为了让 .env 里的 RADAR_MIN_INTERACTIONS 真能生效。
+                "min_interactions": MIN_INTERACTIONS_DEFAULT,
                 "progress": dict(self.progress),
                 "last_result": self.last_result,
                 "cycle_count": self.cycle_count,

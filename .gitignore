@@ -5,13 +5,13 @@
 # 本地配置，切勿提交（含代理地址等环境相关设置）
 .env
 
-# 数据库与日志
-data/*.db
-data/*.db-journal
+# 数据库
+#   radar.db 随仓库分发 —— 自带一份示例数据，克隆下来就能看到界面效果。
+#   其余一概忽略：WAL/SHM/journal 是运行时临时文件，备份和日志体积大。
 data/*.db-wal
 data/*.db-shm
+data/*.db-journal
 data/*.log
-# 手动备份：改动数据结构前自己拷的快照，体积大且含真实抓取数据，勿提交
 data/*.bak*
 
 # Python
@@ -23,12 +23,15 @@ venv/
 # 开发期截图（含真实抓取数据，勿公开）
 _shots/
 
+# 开发用回归脚本 —— 跑它们需要 Node + puppeteer-core，不是运行本项目所必需的
+tools/
+
 # 改动前的本地备份（自己留的后悔药，不是项目内容）
 *.bak
 *.bak-*
 *_before_*
 
-# Node —— tools/ 下的回归脚本需要，但非运行本项目所必需
+# Node
 node_modules/
 package-lock.json
 npm-debug.log*

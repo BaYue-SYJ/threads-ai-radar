@@ -477,6 +477,7 @@ input.f-group{min-width:130px;max-width:130px}
       <div class="chips" id="catChips"></div>
       <span class="spacer"></span>
       <label class="sw"><input type="checkbox" id="onlyRel" checked><span data-i18n="flt_only_relevant">仅看相关</span></label>
+      <label class="sw"><input type="checkbox" id="onlyImg" checked><span data-i18n="flt_has_image">仅看有图</span></label>
       <div class="seg" id="viewSeg">
         <button data-v="card" class="on" data-i18n="flt_view_card">卡片</button>
         <button data-v="table" data-i18n="flt_view_table">表格</button>
@@ -490,8 +491,8 @@ input.f-group{min-width:130px;max-width:130px}
       <span class="flabel" data-i18n="flt_filter">筛选</span>
       <input type="search" id="q" data-i18n-ph="flt_search_posts" placeholder="搜索正文或作者…">
       <label class="flabel" style="min-width:auto" data-i18n="flt_min_inter">最低互动</label>
-      <input type="range" id="minInt" min="0" max="500" step="10" value="0">
-      <span class="rng-v" id="minIntV">0</span>
+      <input type="range" id="minInt" min="0" max="500" step="10" value="30" data-i18n-title="flt_min_inter_title">
+      <span class="rng-v" id="minIntV">30</span>
       <span class="spacer"></span>
       <label class="flabel" style="min-width:auto" data-i18n="flt_sort">排序</label>
       <select id="sort">
@@ -660,7 +661,16 @@ input.f-group{min-width:130px;max-width:130px}
   var TAGCOL = {"模型":"#2B8AAB","生图":"#A8556B","提示词":"#7A6B8C","视频":"#8C6B5E",
                 "Agent 与工具":"#6B7F5E","未分组":"#8A8A85"};
   var P = [], STATUS = null, selCat = new Set(), selKw = new Set();
-  var q='', minInt=0, sortKey='score', view='card', onlyRel=true;
+  /* 默认筛选门槛。
+     DEF_MIN 是「任一互动 > N」的阈值：一条帖子只要 赞 / 回 / 转 里
+     任何一项超过它就算合格，而不是三项相加。
+     默认只显示「有图 + 达标」的帖子 —— 纯文字帖没有视觉参考价值，
+     低互动帖是长尾噪音；两条都能在界面上随时关掉看全量。 */
+  var DEF_MIN = 30;
+  /* minTouched：用户是否亲手调过滑块。调过之后就再也不让后端默认值覆盖它 ——
+     否则每 60 秒一次的状态轮询会把用户刚设好的阈值重置回去。 */
+  var minTouched = false;
+  var q='', minInt=DEF_MIN, sortKey='score', view='card', onlyRel=true, onlyImg=true;
 
   function n(x){return (x||0).toLocaleString('en-US');}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -697,7 +707,14 @@ input.f-group{min-width:130px;max-width:130px}
 
   /* ---------------- 数据拉取 ---------------- */
   function fetchPosts(){
-    fetch('/api/posts?limit=3000&only_relevant=0')
+    /* only_relevant=0 是让后端从**全库**按 score 取前 3000 条。但库里 offtopic
+       有三万多条、最高分(77.4)还高过相关帖(55.7)，它们会把相关帖挤出这个窗口
+       —— 实测 1,844 条相关帖只有 950 条进得了前 3000，894 条白白丢掉，
+       于是「列表里应该有多少条」和「实际能看到多少条」对不上。
+       所以「仅看相关」时干脆让后端只回相关帖（1,844 条全装得下，一条不漏）；
+       只有用户主动取消勾选、明确要看全量时，才去取那个 3000 条窗口。 */
+    var rel = onlyRel ? '1' : '0';
+    fetch('/api/posts?limit=3000&only_relevant='+rel)
       .then(function(r){return r.json();})
       .then(function(d){ P = d.posts||[]; buildChips(); render(); })
       .catch(function(){});
@@ -746,27 +763,54 @@ input.f-group{min-width:130px;max-width:130px}
   var rng=document.getElementById('minInt');
   document.getElementById('q').oninput=function(e){q=e.target.value.toLowerCase();render();};
   document.getElementById('sort').onchange=function(e){sortKey=e.target.value;render();};
-  document.getElementById('onlyRel').onchange=function(e){onlyRel=e.target.checked;buildChips();render();};
-  rng.oninput=function(e){minInt=+e.target.value;
+  /* 切换「仅看相关」必须重新取数 —— 两种模式的查询条件不同
+     （相关模式让后端只回相关帖，全量模式取全库前 3000 条，见 fetchPosts） */
+  document.getElementById('onlyRel').onchange=function(e){
+    onlyRel=e.target.checked;buildChips();fetchPosts();};
+  document.getElementById('onlyImg').onchange=function(e){onlyImg=e.target.checked;render();};
+  rng.oninput=function(e){minInt=+e.target.value;minTouched=true;
     document.getElementById('minIntV').textContent=minInt;render();};
+
+  /* 后端 config.py 的 RADAR_MIN_INTERACTIONS 可以覆盖上面那个 DEF_MIN。
+     这样 .env 里配的阈值才真的算数，而不是只在 Python 侧躺着一个没人读的常量。
+     只在页面初始化时应用一次（minTouched 一旦为真就不再覆盖）。 */
+  function applyServerMin(s){
+    if(minTouched || !s) return;
+    var v = s.min_interactions;
+    if(typeof v !== 'number' || v === minInt) return;
+    minInt = v; rng.value = v;
+    document.getElementById('minIntV').textContent = v;
+    render();
+  }
   document.querySelectorAll('#viewSeg button').forEach(function(b){
     b.onclick=function(){view=b.dataset.v;
       document.querySelectorAll('#viewSeg button').forEach(function(x){x.classList.remove('on');});
       b.classList.add('on');render();};});
   document.getElementById('reset').onclick=function(){
-    selKw.clear();selCat.clear();q='';minInt=0;sortKey='score';
-    document.getElementById('q').value='';rng.value=0;
-    document.getElementById('minIntV').textContent='0';
+    /* 重置回「默认视图」而不是「全放开」—— 默认视图就是有图 + 达标，
+       否则一点重置屏幕会突然涌进上千条长尾帖，反而像出了故障。 */
+    selKw.clear();selCat.clear();q='';minInt=DEF_MIN;sortKey='score';onlyImg=true;
+    document.getElementById('q').value='';rng.value=DEF_MIN;
+    document.getElementById('minIntV').textContent=DEF_MIN;
+    document.getElementById('onlyImg').checked=true;
     document.getElementById('sort').value='score';
     document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
     render();};
 
   /* ---------------- 渲染 ---------------- */
   var stage=document.getElementById('stage');
+  /* 「互动量」取 赞/回/转 三者的最大值，而不是相加。
+     相加会把「34 赞 + 33 回 + 33 转」和「100 赞 + 0 + 0」判成同一档，
+     但只有后者是真爆款；而且需求本身就是「任意一项超过阈值」。
+     引用(quote)不计入 —— 它衡量的是「被引用讨论」而非本条自身热度。
+     阈值 <=0 时不过滤，保留滑块的「关闭」语义。 */
+  function peak(p){return Math.max(p.like_count||0,p.reply_count||0,p.repost_count||0);}
+
   function current(){
     var list=P.filter(function(p){
       if(onlyRel && p.relevance!=='relevant') return false;
-      if(total(p)<minInt) return false;
+      if(onlyImg && !p.has_image) return false;
+      if(minInt>0 && peak(p)<=minInt) return false;
       if(selCat.size && !selCat.has(p.category)) return false;
       if(selKw.size && !(p.keywords||[]).some(function(k){return selKw.has(k);})) return false;
       if(q && (p.text+' '+p.username).toLowerCase().indexOf(q)<0) return false;
@@ -1612,7 +1656,8 @@ input.f-group{min-width:130px;max-width:130px}
     .then(function(d){ renderKw(d.keywords||[]); });
   fetchWatch();
   fetchPosts();
-  fetch('/api/status').then(function(r){return r.json();}).then(setState).catch(function(){});
+  fetch('/api/status').then(function(r){return r.json();}).then(function(s){
+    setState(s); applyServerMin(s);}).catch(function(){});
   connect();
   setInterval(fetchPosts, 60000);
 })();
